@@ -382,21 +382,23 @@ screens.welcome = {view: () => `<div class="screen ob"><div class="scroll">
   <button class="btn peach" data-go="signup">Create an account</button>
 </div></div>`};
 
-screens.signup = {view: () => `<div class="screen ob"><div class="scroll">
+// Sign-up details are remembered on this device and pre-filled next time.
+const profile = () => { try { return JSON.parse(store.get('ccProfile') || '{}'); } catch { return {}; } };
+screens.signup = {view: () => { const me = profile(); return `<div class="screen ob"><div class="scroll">
   ${back('welcome', 'Back')}
   ${stepper(1)}
   <h2 class="h1">Create your account</h2>
   <form id="signup" class="stack" style="gap:14px">
-    <div class="fld"><label for="f-name">Full legal name</label><input id="f-name" required autocomplete="name"></div>
-    <div class="fld"><label for="f-dob">Date of birth</label><input id="f-dob" type="date" required></div>
-    <div class="fld"><label for="f-email">Email</label><input id="f-email" type="email" required autocomplete="email"></div>
-    <div class="fld"><label for="f-phone">Mobile number</label><input id="f-phone" type="tel" autocomplete="tel"><span class="fld-help">I'll text you when something needs your OK.</span></div>
+    <div class="fld"><label for="f-name">Full legal name</label><input id="f-name" required autocomplete="name" value="${esc(me.name)}"></div>
+    <div class="fld"><label for="f-dob">Date of birth</label><input id="f-dob" type="date" required value="${esc(me.dob)}"></div>
+    <div class="fld"><label for="f-email">Email</label><input id="f-email" type="email" required autocomplete="email" value="${esc(me.email)}"></div>
+    <div class="fld"><label for="f-phone">Mobile number</label><input id="f-phone" type="tel" autocomplete="tel" value="${esc(me.phone)}"><span class="fld-help">I'll text you when something needs your OK.</span></div>
     <div class="fld"><label for="f-pw">Password</label><input id="f-pw" type="password" required autocomplete="new-password" minlength="8"></div>
     <p style="font-size:13px;color:#CDB6E0">Your name and date of birth need to match your insurance card. That's how your plan and doctors confirm it's you.</p>
     <label class="row" style="align-items:flex-start;gap:10px;font-size:13px;line-height:1.45;color:#E7DDEB"><input type="checkbox" required style="width:20px;height:20px;margin:0;flex-shrink:0;accent-color:var(--peach)"><span>I agree to the Terms and Privacy Policy. My health data is never sold or used for ads, and nothing is shared without my OK.</span></label>
     <button class="btn peach" type="submit" style="margin-top:4px">Create account</button>
   </form>
-</div></div>`};
+</div></div>`; }};
 
 screens.authorize = {
   load: () => api('/api/me'),
@@ -978,7 +980,9 @@ document.addEventListener('submit', e => {
   const f = e.target, btn = f.querySelector('[type=submit]');
   if (f.id === 'signup') withBusy(btn, async () => {
     S.acctName = $('#f-name').value.trim();
-    await api('/api/signup', {method: 'POST', body: {name: S.acctName, dob: $('#f-dob').value, email: $('#f-email').value.trim(), phone: $('#f-phone').value.trim() || null}});
+    const acct = {name: S.acctName, dob: $('#f-dob').value, email: $('#f-email').value.trim(), phone: $('#f-phone').value.trim() || null};
+    store.set('ccProfile', JSON.stringify(acct));
+    await api('/api/signup', {method: 'POST', body: acct});
     toast('Account created'); go('authorize');
   });
   else if (f.id === 'authz') withBusy(btn, async () => { await api('/api/consent/authorized-rep', {method: 'POST'}); toast('Authorization signed'); go('plan'); });

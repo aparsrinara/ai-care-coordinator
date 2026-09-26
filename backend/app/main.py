@@ -329,6 +329,7 @@ async def scan_card(file: UploadFile | None = File(None), x_session_id: str | No
     s = session(x_session_id)
     s["insurance"] = insurance.sample()
     ins = s["insurance"]
+    ins["memberName"] = s["account"]["name"]  # the sample plan belongs to whoever signed up
     return {"card": {"payer": ins["payer"], "plan": ins["planName"], "planType": ins["planType"],
                      "memberName": ins["memberName"], "memberId": ins["memberId"], "group": ins["groupNumber"],
                      "rxBin": ins["rxBin"]}, **_insurance_view(s)}
