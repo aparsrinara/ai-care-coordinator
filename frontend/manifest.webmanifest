@@ -1,0 +1,15 @@
+{
+  "name": "Care Coordinator",
+  "short_name": "Care",
+  "description": "Your AI care coordinator: visit follow-ups, costs on your plan, and your year in care.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F6F2EC",
+  "theme_color": "#F6F2EC",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml"}
+  ]
+}

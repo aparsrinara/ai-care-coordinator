@@ -282,6 +282,21 @@ def get_insurance(x_session_id: str | None = Header(None)):
     return _insurance_view(session(x_session_id))
 
 
+@app.get("/api/me")
+def me(x_session_id: str | None = Header(None)):
+    """Profile screen: the account, the plan and what's connected."""
+    s = session(x_session_id)
+    ins = s["insurance"]
+    return {
+        "account": s["account"],
+        "insurance": {"payer": ins["payer"], "planName": ins["planName"], "planType": ins["planType"],
+                      "memberId": ins["memberId"], "source": ins["source"],
+                      "estimatedFields": [k for k, v in ins["benefitSources"].items() if v in ("typical", "assumed")]},
+        "connections": [{"name": _t(D.CONNECTIONS[k]["org"], s), "linked": v} for k, v in s["links"].items()],
+        "authorizedRep": s["authorizedRep"],
+    }
+
+
 @app.post("/api/card/scan")
 async def scan_card(file: UploadFile | None = File(None), x_session_id: str | None = Header(None)):
     """'Use the sample card' path: loads Maya's sample Blue Ridge plan. (Real card OCR is not built yet.)"""
