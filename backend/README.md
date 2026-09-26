@@ -36,7 +36,7 @@ member's name, payer and copays.
 | Use sample card | `POST /api/card/scan` | Loads the sample Blue Ridge plan (Maya), for judges who don't want to type anything |
 | Link sign-in | `GET /api/connections` → `sources.plan` / `sources.portal` | `scopes` = the "wants read-only access to" list, `via` = the fine print |
 | Allow | `POST /api/connections/plan`, `POST /api/connections/portal` | Simulated SMART on FHIR sign-in |
-| Authorize | `POST /api/consent/authorized-rep` | New step, see below |
+| Authorize | `POST /api/consent/authorized-rep` | New onboarding step: member e-signs a HIPAA authorization so the coordinator can call offices, talk to the plan and dispute bills for them. `readyToFinish` requires it |
 | Found doctors | `GET /api/connections` → `foundFromClaims`, `readyToFinish` | Only the portal is linkable; pharmacy + imaging come from claims |
 | Today | `GET /api/today` | `coordinator.pendingApprovals` drives the "Review 1 approval" button and the Care tab badge |
 | Visit summary | `GET /api/visits/latest` | `summary` is written by the AI from the visit note. Each step has `status` (`booked`/`ordered`/`needs_approval`/`in_progress`) and `channel` (`phone_call`/`pharmacy`/`portal_message`) |

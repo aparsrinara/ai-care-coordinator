@@ -16,3 +16,14 @@ services:
         value: openai.gpt-oss-120b-1:0
       - key: AWS_BEARER_TOKEN_BEDROCK
         sync: false
+
+  - type: web
+    name: care-coordinator-app
+    runtime: static
+    rootDir: frontend
+    buildCommand: echo "static site, no build step"
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
