@@ -1,0 +1,165 @@
+"""Sample patient record for the demo, stored as FHIR R4 resources.
+
+Everything here is fake. In production these resources would come from:
+- the health plan's CMS Patient Access API (Coverage, ExplanationOfBenefit)
+- the health system's SMART on FHIR endpoint, e.g. Epic (Patient, Encounter,
+  DocumentReference, ServiceRequest, Appointment, MedicationRequest)
+- the pharmacy (MedicationDispense)
+The rest of the app only reads from BUNDLE, so swapping in a real FHIR client
+means replacing this module.
+"""
+
+PATIENT_ID = "maya-chen"
+
+VISIT_NOTE = """\
+NORTHSIDE HEALTH - PRIMARY CARE
+After Visit Summary / Progress Note
+Patient: Chen, Maya   DOB: 03/04/1991   MRN: NH-0048812
+Date of service: 09/22/2026   Provider: Priya Nair, MD (Internal Medicine)
+Visit type: Annual preventive exam (CPT 99395) + problem-oriented (knee)
+
+SUBJECTIVE
+35 y.o. F here for annual physical. Feels well overall. Reports R knee pain x 3 months,
+worse with stairs and running, no trauma, no locking/giving way. Tried ibuprofen PRN
+with partial relief. Also notes a mole on the L upper back that her spouse thinks has
+gotten darker over the past year. Taking atorvastatin 10 mg daily, adherent, no side
+effects. Due for 90-day supply.
+
+OBJECTIVE
+BP 118/76, HR 68, BMI 23.4. Gen: well appearing.
+Skin: 6 mm irregularly pigmented macule L upper back, borders slightly irregular.
+R knee: no effusion, full ROM, tenderness at lateral patellar facet, + patellar grind.
+Ligaments stable. Lachman negative, McMurray negative.
+
+ASSESSMENT / PLAN
+1. Annual exam (Z00.00): Up to date on vaccines. Counseled on exercise, sunscreen.
+2. Hyperlipidemia (E78.5): On atorvastatin 10 mg. Last LDL 142 (2025).
+   -> Fasting lipid panel + CMP. Refill atorvastatin 10 mg PO daily, #90, RF x3.
+3. Patellofemoral pain syndrome, R knee (M22.2X1): Exam c/w PFPS, no signs of
+   internal derangement. Imaging not indicated at this time; consider MRI if no
+   improvement after 6-8 wks of PT.
+   -> Referral to physical therapy, 2x/week x 6 weeks (12 visits).
+4. Atypical nevus, L upper back (D22.5): ABCDE: asymmetry, color variation.
+   -> Referral to dermatology for evaluation +/- biopsy. Routine priority.
+
+Follow up in 12 months or sooner PRN. Patient verbalized understanding.
+Electronically signed: Priya Nair, MD 09/22/2026 16:42
+"""
+
+
+def _ref(kind: str, id_: str) -> dict:
+    return {"reference": f"{kind}/{id_}"}
+
+
+PATIENT = {
+    "resourceType": "Patient",
+    "id": PATIENT_ID,
+    "name": [{"family": "Chen", "given": ["Maya"]}],
+    "birthDate": "1991-03-04",
+    "gender": "female",
+    "telecom": [
+        {"system": "email", "value": "maya.chen@example.com"},
+        {"system": "phone", "value": "(555) 014-2291", "use": "mobile"},
+    ],
+}
+
+PRACTITIONERS = [
+    {"resourceType": "Practitioner", "id": "dr-nair", "name": [{"family": "Nair", "given": ["Priya"], "prefix": ["Dr."]}],
+     "qualification": [{"code": {"text": "Internal Medicine"}}]},
+    {"resourceType": "Practitioner", "id": "dr-lee", "name": [{"family": "Lee", "given": ["Jordan"], "prefix": ["Dr."]}],
+     "qualification": [{"code": {"text": "Dermatology"}}]},
+]
+
+ORGANIZATIONS = [
+    {"resourceType": "Organization", "id": "blue-ridge", "name": "Blue Ridge Health", "type": [{"text": "Payer"}]},
+    {"resourceType": "Organization", "id": "northside", "name": "Northside Health", "type": [{"text": "Health system"}]},
+    {"resourceType": "Organization", "id": "elm-st", "name": "Elm St Pharmacy", "type": [{"text": "Pharmacy"}]},
+    {"resourceType": "Organization", "id": "motion-pt", "name": "Motion PT", "type": [{"text": "Physical therapy"}]},
+    {"resourceType": "Organization", "id": "clearview", "name": "Clearview Imaging", "type": [{"text": "Imaging center"}]},
+]
+
+COVERAGE = {
+    "resourceType": "Coverage",
+    "id": "cov-2026",
+    "status": "active",
+    "subscriber": _ref("Patient", PATIENT_ID),
+    "beneficiary": _ref("Patient", PATIENT_ID),
+    "subscriberId": "BRX482190337",
+    "payor": [_ref("Organization", "blue-ridge")],
+    "class": [
+        {"type": {"text": "group"}, "value": "20418"},
+        {"type": {"text": "plan"}, "value": "SILVER-1500", "name": "Blue Ridge PPO Silver (2026)"},
+        {"type": {"text": "rxbin"}, "value": "610014"},
+    ],
+    "period": {"start": "2026-01-01", "end": "2026-12-31"},
+}
+
+ENCOUNTER = {
+    "resourceType": "Encounter",
+    "id": "enc-2026-09-22",
+    "status": "finished",
+    "class": {"code": "AMB"},
+    "type": [{"text": "Annual physical"}],
+    "subject": _ref("Patient", PATIENT_ID),
+    "participant": [{"individual": _ref("Practitioner", "dr-nair")}],
+    "serviceProvider": _ref("Organization", "northside"),
+    "period": {"start": "2026-09-22T15:30:00-04:00", "end": "2026-09-22T16:10:00-04:00"},
+}
+
+DOCUMENT_REFERENCE = {
+    "resourceType": "DocumentReference",
+    "id": "note-2026-09-22",
+    "status": "current",
+    "type": {"coding": [{"system": "http://loinc.org", "code": "11506-3", "display": "Progress note"}]},
+    "subject": _ref("Patient", PATIENT_ID),
+    "context": {"encounter": [_ref("Encounter", ENCOUNTER["id"])]},
+    "content": [{"attachment": {"contentType": "text/plain", "data_text": VISIT_NOTE}}],
+}
+
+SERVICE_REQUESTS = [
+    {"resourceType": "ServiceRequest", "id": "sr-labs", "status": "active", "intent": "order",
+     "code": {"text": "Fasting lipid panel + CMP"}, "encounter": _ref("Encounter", ENCOUNTER["id"])},
+    {"resourceType": "ServiceRequest", "id": "sr-derm", "status": "active", "intent": "order",
+     "code": {"text": "Referral to dermatology"}, "reasonCode": [{"text": "Atypical nevus, L upper back"}],
+     "performer": [_ref("Practitioner", "dr-lee")], "encounter": _ref("Encounter", ENCOUNTER["id"])},
+    {"resourceType": "ServiceRequest", "id": "sr-pt", "status": "active", "intent": "order",
+     "code": {"text": "Physical therapy, 2x/week x 6 weeks"}, "quantityQuantity": {"value": 12, "unit": "visits"},
+     "reasonCode": [{"text": "Patellofemoral pain syndrome, R knee"}],
+     "performer": [_ref("Organization", "motion-pt")], "encounter": _ref("Encounter", ENCOUNTER["id"])},
+]
+
+MEDICATION_REQUEST = {
+    "resourceType": "MedicationRequest", "id": "mr-atorva", "status": "active", "intent": "order",
+    "medicationCodeableConcept": {"text": "Atorvastatin 10 mg tablet"},
+    "dosageInstruction": [{"text": "1 tablet by mouth daily"}],
+    "dispenseRequest": {"quantity": {"value": 90, "unit": "tablets"}, "numberOfRepeatsAllowed": 3},
+    "encounter": _ref("Encounter", ENCOUNTER["id"]),
+}
+
+APPOINTMENTS = [
+    {"resourceType": "Appointment", "id": "appt-labs", "status": "booked", "description": "Fasting blood work",
+     "start": "2026-09-28T07:40:00-04:00", "basedOn": [_ref("ServiceRequest", "sr-labs")],
+     "participant": [{"actor": {"display": "Northside Lab"}}]},
+    {"resourceType": "Appointment", "id": "appt-derm", "status": "booked", "description": "Dermatology skin check",
+     "start": "2026-10-07T08:15:00-04:00", "basedOn": [_ref("ServiceRequest", "sr-derm")],
+     "participant": [{"actor": _ref("Practitioner", "dr-lee")}]},
+]
+
+# Aug 14 lab visit, billed twice: the "duplicate charge" the coverage screen flags.
+EXPLANATIONS_OF_BENEFIT = [
+    {"resourceType": "ExplanationOfBenefit", "id": f"eob-{n}", "status": "active", "use": "claim",
+     "patient": _ref("Patient", PATIENT_ID), "insurer": _ref("Organization", "blue-ridge"),
+     "provider": {"display": "Northside Lab"}, "billablePeriod": {"start": "2026-08-14"},
+     "item": [{"productOrService": {"text": "Lab panel"}, "net": {"value": 185, "currency": "USD"}}],
+     "total": [{"category": {"text": "member liability"}, "amount": {"value": 185, "currency": "USD"}}]}
+    for n in ("0814-a", "0814-b")
+]
+
+BUNDLE = {
+    "resourceType": "Bundle",
+    "type": "collection",
+    "entry": [{"resource": r} for r in [
+        PATIENT, *PRACTITIONERS, *ORGANIZATIONS, COVERAGE, ENCOUNTER, DOCUMENT_REFERENCE,
+        *SERVICE_REQUESTS, MEDICATION_REQUEST, *APPOINTMENTS, *EXPLANATIONS_OF_BENEFIT,
+    ]],
+}
