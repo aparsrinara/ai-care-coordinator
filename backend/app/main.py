@@ -476,13 +476,17 @@ def _pt_view(s: dict) -> dict:
         "status": _pt_step(s)["status"],
         "plan": [
             "Ask Dr. Nair's office to submit the prior authorization. They already have your knee notes.",
-            "Track it with your health plan every 2 days, and appeal if it's denied.",
+            _t("Track it with {payer} every 2 days. If it's denied, I'll tell you and help you appeal.", s),
             "Book your first visit at Motion PT (in-network, 1.2 mi) once it's approved.",
         ],
         "cost": {"perVisit": per_visit, "breakdown": pt["breakdown"], "visits": 12,
                  "estimatedTotal": _projected_total(s, "pt_visit", 12),
                  "oopLeft": _estimate(s, "pt_visit")["oopLeft"]},
         "privacy": _t("Your request goes to Dr. Nair's office through your patient portal. The office submits it to {payer}.", s),
+        # Appeals are covered by the member's signed authorization; this lets the coordinator act on a denial
+        # without waiting (plans set appeal deadlines, and PT denials are often overturned with the notes).
+        "autoAppealLabel": _t("If {payer} denies it, file an appeal right away without asking me first", s),
+        "autoAppeal": s["autoApprove"],
         "timeline": timeline,
         "timingNote": "Demo timing is sped up. Real approvals usually take 2 to 10 business days, and I follow up every 2 days.",
     }

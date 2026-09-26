@@ -604,7 +604,7 @@ screens.approve = {
       <div class="muted" style="font-size:13px">${d.cost.breakdown.map(b => esc(b.label)).join(' · ')}. Counts toward your out-of-pocket max: ${money(d.cost.oopLeft)} left this year.</div>
     </section>
     <div class="note"><span style="color:var(--plum-2);flex-shrink:0">${ic('lock', 18)}</span><span>${esc(d.privacy)}</span></div>
-    <label class="row card" style="min-height:48px;padding:0 14px;border-radius:14px;font-size:14px"><input type="checkbox" id="auto" style="width:20px;height:20px;accent-color:var(--plum-2);margin:0">Auto-approve routine refills and reminders from now on</label>
+    <label class="row card" style="min-height:48px;padding:12px 14px;border-radius:14px;font-size:14px;line-height:1.4"><input type="checkbox" id="auto" ${d.autoAppeal ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--plum-2);margin:0;flex-shrink:0">${esc(d.autoAppealLabel)}</label>
     <div class="stack" style="gap:8px">
       <button class="btn" data-act="approve" style="min-height:52px">Approve and send</button>
       <button class="btn ghost" data-go="visit">Not now</button>
