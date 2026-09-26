@@ -155,11 +155,54 @@ EXPLANATIONS_OF_BENEFIT = [
     for n in ("0814-a", "0814-b")
 ]
 
+# Results of the Sep 28 fasting labs. They arrive when the demo "fast-forwards"
+# (POST /api/demo/results-in). Prior LDL is from 2025 for the trend.
+LAB_DATE = "2026-09-28T07:40:00-04:00"
+
+
+def _obs(id_: str, loinc: str, name: str, value: float, unit: str, low=None, high=None, date=LAB_DATE, flag=None):
+    rng = {}
+    if low is not None:
+        rng["low"] = {"value": low, "unit": unit}
+    if high is not None:
+        rng["high"] = {"value": high, "unit": unit}
+    obs = {"resourceType": "Observation", "id": id_, "status": "final",
+           "category": [{"coding": [{"code": "laboratory"}]}],
+           "code": {"coding": [{"system": "http://loinc.org", "code": loinc, "display": name}], "text": name},
+           "subject": _ref("Patient", PATIENT_ID), "effectiveDateTime": date,
+           "valueQuantity": {"value": value, "unit": unit}, "referenceRange": [rng]}
+    if flag:
+        obs["interpretation"] = [{"coding": [{"code": flag}], "text": {"H": "High", "L": "Low", "N": "Normal"}[flag]}]
+    return obs
+
+
+LAB_OBSERVATIONS = [
+    _obs("obs-ldl", "13457-7", "LDL cholesterol", 118, "mg/dL", high=100, flag="H"),
+    _obs("obs-hdl", "2085-9", "HDL cholesterol", 58, "mg/dL", low=40, flag="N"),
+    _obs("obs-tg", "2571-8", "Triglycerides", 102, "mg/dL", high=150, flag="N"),
+    _obs("obs-chol", "2093-3", "Total cholesterol", 196, "mg/dL", high=200, flag="N"),
+    _obs("obs-glu", "2345-7", "Glucose, fasting", 91, "mg/dL", low=70, high=99, flag="N"),
+    _obs("obs-alt", "1742-6", "ALT (liver)", 24, "U/L", low=7, high=35, flag="N"),
+]
+PRIOR_LDL = _obs("obs-ldl-2025", "13457-7", "LDL cholesterol", 142, "mg/dL", high=100, date="2025-09-18T08:00:00-04:00", flag="H")
+
+DIAGNOSTIC_REPORT = {
+    "resourceType": "DiagnosticReport", "id": "dr-lipids-2026-09-28", "status": "final",
+    "code": {"text": "Lipid panel + comprehensive metabolic panel"},
+    "subject": _ref("Patient", PATIENT_ID), "basedOn": [_ref("ServiceRequest", "sr-labs")],
+    "effectiveDateTime": LAB_DATE, "issued": "2026-09-29T14:05:00-04:00",
+    "performer": [{"display": "Northside Lab"}],
+    "result": [_ref("Observation", o["id"]) for o in LAB_OBSERVATIONS],
+    # The ordering doctor's released comment (what the patient portal shows).
+    "conclusion": "LDL improved from 142 to 118 on atorvastatin, liver tests normal. Continue atorvastatin 10 mg. "
+                  "Keep up the exercise. Recheck lipids in 12 months. - Dr. Nair",
+}
+
 BUNDLE = {
     "resourceType": "Bundle",
     "type": "collection",
     "entry": [{"resource": r} for r in [
         PATIENT, *PRACTITIONERS, *ORGANIZATIONS, COVERAGE, ENCOUNTER, DOCUMENT_REFERENCE,
-        *SERVICE_REQUESTS, MEDICATION_REQUEST, *APPOINTMENTS, *EXPLANATIONS_OF_BENEFIT,
+        *SERVICE_REQUESTS, MEDICATION_REQUEST, *APPOINTMENTS, *EXPLANATIONS_OF_BENEFIT, PRIOR_LDL,
     ]],
 }

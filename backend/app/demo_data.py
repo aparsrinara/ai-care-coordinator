@@ -1,77 +1,19 @@
 """Demo content that isn't FHIR: plan benefits, the booking call script, the recap.
 
-The demo's "today" is Friday Sep 25, 2026, three days after Maya's physical.
+The demo's "today" is Friday Sep 25, 2026, three days after the physical.
+Text can contain {tokens} (name, payer, prices) that main._t() fills in per member.
 """
 
 DEMO_TODAY = "2026-09-25"
 DEMO_TODAY_LABEL = "Friday, Sep 25"
 
-# Benefit details a real app would get from the plan's Summary of Benefits and
-# Coverage (SBC) plus the Transparency in Coverage price-comparison tool.
-PLAN = {
-    "member": "Maya Chen",
-    "plan": "Blue Ridge PPO Silver (2026)",
-    "coverage": "Maya + Sam (spouse)",
-    "memberId": "BRX 482 190 337",
-    "group": "20418",
-    "deductible": {"amount": 1500, "met": 1120},
-    "outOfPocketMax": {"amount": 4000, "met": 2340},
-    "coinsuranceAfterDeductible": "20% in-network, 40% out-of-network",
-    "copays": {
-        "primaryCare": 25,
-        "specialist": 50,
-        "urgentCare": 75,
-        "emergencyRoom": "350 after deductible",
-        "physicalTherapy": "40 per visit, up to 30 visits/year, prior authorization required",
-    },
-    "preventiveCare": "$0 in-network (annual physical, screenings, vaccines)",
-    "imaging": "MRI/CT: deductible then 20% coinsurance; prior authorization required",
-    "negotiatedPrices": {
-        "Knee MRI at Clearview Imaging (in-network)": 1200,
-        "Knee MRI at St. Mary's Hospital (in-network, hospital outpatient)": 2900,
-        "PT visit at Motion PT": 140,
-        "Dermatology new-patient visit": 260,
-    },
-    "pharmacy": {
-        "generic": "$10 for 30 days / $20 for 90 days at preferred pharmacies",
-        "nonPreferredGeneric90Day": 58,
-        "preferredBrand": 45,
-        "preferredPharmacies": "Elm St Pharmacy, mail order",
-        "usualPharmacy": "Main St Drug (not in the preferred network)",
-    },
-    "dental": "Cleanings covered 100%, 2 per year (0 used in 2026)",
-    "vision": "Eye exam $10 copay, once a year (not used in 2026)",
-    "fsa": {"balanceLeft": 640, "deadline": "Dec 31, 2026, no rollover"},
-}
-
-# Parsed result of the insurance card photo (the demo always "reads" this card).
-CARD = {
-    "payer": "Blue Ridge Health",
-    "plan": "Blue Ridge PPO Silver 1500",
-    "planType": "PPO",
-    "memberName": "Maya Chen",
-    "memberId": "BRX 482 190 337",
-    "group": "20418",
-    "rxBin": "610014",
-    "matchesAccount": True,
-}
-
-PLANS_DIRECTORY = [
-    {"id": "blue-ridge", "name": "Blue Ridge Health", "subtitle": "PPO, HMO and EPO plans", "initials": "BR"},
-    {"id": "cascade", "name": "Cascade Health Alliance", "subtitle": "Employer and individual plans", "initials": "CH"},
-    {"id": "harborview", "name": "Harborview Mutual", "subtitle": "PPO plans", "initials": "HM"},
-    {"id": "summit", "name": "Summit Care", "subtitle": "HMO plans", "initials": "SC"},
-    {"id": "medicare", "name": "Medicare", "subtitle": "Original Medicare and Advantage", "initials": "MC"},
-    {"id": "medicaid", "name": "Medicaid", "subtitle": "State Medicaid plans", "initials": "MD"},
-]
-
 # What each connection is, what it can read, and how it connects in real life.
 CONNECTIONS = {
     "plan": {
-        "org": "Blue Ridge Health", "initials": "BR", "color": "#1E4C8A",
+        "org": "{payer}", "initials": "{payer_initials}", "color": "#1E4C8A",
         "scopes": ["Your coverage, benefits and costs", "Claims and Explanations of Benefits",
                    "Deductible and out-of-pocket totals", "Prior authorization status"],
-        "via": "Shared through Blue Ridge's patient access API (FHIR), using your Blue Ridge member login.",
+        "via": "Shared through {payer}'s patient access API (FHIR), using your {payer} member login.",
         "standard": "CMS Patient Access API (CARIN Blue Button)",
     },
     "portal": {
@@ -100,7 +42,7 @@ NEXT_STEPS = {
     "labs": {"title": "Fasting labs", "status": "booked", "channel": "phone_call",
              "detail": "Mon 9/28, 7:40 AM at Northside Lab. I'll remind you to stop eating after 9 PM Sunday."},
     "refill": {"title": "90-day refill", "status": "ordered", "channel": "pharmacy",
-               "detail": "Moved it from Main St Drug to Elm St Pharmacy, which is in your plan's preferred network: $20 instead of $58. Ready Saturday."},
+               "detail": "Moved it from Main St Drug to Elm St Pharmacy, which is in your plan's preferred network: {rx_pref} instead of {rx_non}. Ready Saturday."},
     "derm": {"title": "Dermatology referral", "status": "booked", "channel": "phone_call",
              "detail": "Confirmed Dr. Lee's office has Dr. Nair's referral notes, then booked Oct 7. I grabbed a cancellation, 5 weeks sooner.",
              "callId": "derm"},
@@ -108,14 +50,14 @@ NEXT_STEPS = {
 
 PT_STEPS = [
     {"title": "Asked Dr. Nair's office to submit the request", "detail": "Sent through your Northside portal messages"},
-    {"title": "Office submitted it to Blue Ridge", "detail": "Request #PA-40718"},
-    {"title": "Blue Ridge approved 12 visits", "detail": "Valid through Mar 31, 2027"},
+    {"title": "Office submitted it to {payer}", "detail": "Request #PA-40718"},
+    {"title": "{payer} approved 12 visits", "detail": "Valid through Mar 31, 2027"},
     {"title": "Booked your first visit at Motion PT", "detail": "Tue Oct 6, 5:30 PM · 1.2 mi away"},
 ]
 PT_STEP_SECONDS = 2.2  # sped up for the demo; real prior auths take 2-10 business days
 
 UPCOMING = [
-    {"dow": "SAT", "day": "26", "title": "90-day refill ready", "detail": "Elm St Pharmacy · saved $38", "status": "Ordered", "tone": "info", "date": "2026-09-26"},
+    {"dow": "SAT", "day": "26", "title": "90-day refill ready", "detail": "Elm St Pharmacy · saved {rx_saved}", "status": "Ordered", "tone": "info", "date": "2026-09-26"},
     {"dow": "MON", "day": "28", "title": "Fasting blood work", "detail": "7:40 AM · Northside Lab", "status": "Booked", "tone": "ok", "date": "2026-09-28"},
     {"dow": "WED", "day": "7", "title": "Dermatology skin check", "detail": "Oct 7, 8:15 AM · Dr. Lee", "status": "Booked", "tone": "ok", "date": "2026-10-07"},
 ]
@@ -128,14 +70,14 @@ CALL = {
     "result": {"status": "booked", "title": "Wed Oct 7, 8:15 AM · Dr. Lee",
                "detail": "5 weeks sooner than the first opening. Added to your calendar, with a reminder the day before."},
     "lines": [
-        {"speaker": "coordinator", "text": "Hi, this is an AI care coordinator calling on behalf of Maya Chen, date of birth March 4, 1991. She's authorized me to schedule for her. I'm checking that you received her dermatology referral from Dr. Priya Nair."},
+        {"speaker": "coordinator", "text": "Hi, this is an AI care coordinator calling on behalf of {name}, date of birth {dob_spoken}. They've authorized me to schedule for her. I'm checking that you received her dermatology referral from Dr. Priya Nair."},
         {"speaker": "front_desk", "text": "Let me look. Yes, we have it."},
-        {"speaker": "coordinator", "text": "Great. What's the soonest new-patient opening with Dr. Lee? She's on a Blue Ridge PPO."},
+        {"speaker": "coordinator", "text": "Great. What's the soonest new-patient opening with Dr. Lee? They're on a {payer} {plan_type} plan."},
         {"speaker": "front_desk", "text": "First opening is November 11 at 2:30."},
-        {"speaker": "coordinator", "text": "Please book that, and add her to your cancellation list. She can come in on short notice on weekday mornings."},
+        {"speaker": "coordinator", "text": "Please book that, and add them to your cancellation list. They can come in on short notice on weekday mornings."},
         {"speaker": "front_desk", "text": "Oh, someone just cancelled October 7 at 8:15. Want that instead?"},
-        {"speaker": "coordinator", "text": "Yes. Maya already approved weekday mornings. Please book October 7 at 8:15."},
-        {"speaker": "front_desk", "text": "Done. She's confirmed for October 7 at 8:15 with Dr. Lee."},
+        {"speaker": "coordinator", "text": "Yes. {first} already approved weekday mornings. Please book October 7 at 8:15."},
+        {"speaker": "front_desk", "text": "Done. {first} is confirmed for October 7 at 8:15 with Dr. Lee."},
     ],
 }
 
@@ -147,7 +89,7 @@ DEFAULT_DOCS = [
 
 RECAP = {
     "year": 2026,
-    "intro": {"title": "Maya, your Year in Care is here.", "subtitle": "You showed up for yourself 14 times this year. Here's what that looked like."},
+    "intro": {"title": "{first}, your Year in Care is here.", "subtitle": "You showed up for yourself 14 times this year. Here's what that looked like."},
     "numbers": {"appointmentsKept": 14, "refillsOnTime": 11, "refillsTotal": 11, "hoursSaved": 31},
     "money": {
         "total": 2860,

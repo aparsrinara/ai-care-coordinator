@@ -56,3 +56,15 @@ def summarize_visit(note: str) -> dict | None:
         log.warning("Unexpected visit summary output: %s", text[:300])
         return None
     return data
+
+
+RESULTS_SYSTEM = """You explain lab results to a patient in plain English. You are not a doctor.
+Return 2 to 3 short sentences, under 60 words, 6th-grade reading level, no jargon.
+- Say which results are in range and which aren't, and the trend if a prior value is given.
+- Repeat the doctor's comment and plan faithfully. Add no advice, diagnosis or reassurance beyond what the doctor wrote.
+- End with: questions go to the doctor who ordered the test.
+Plain text only."""
+
+
+def explain_results(results_text: str) -> str | None:
+    return complete(RESULTS_SYSTEM, [{"role": "user", "text": results_text}], max_tokens=1200)
