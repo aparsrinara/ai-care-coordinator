@@ -48,7 +48,6 @@ member's name, payer and copays.
 | Year in Care | `GET /api/recap` | |
 | Lab results | `GET /api/results` | `status: pending` until `POST /api/demo/results-in` (demo fast-forward). Then: results with ranges/flags, trend, AI plain-English explanation, doctor's comment. `GET /api/today` gets a `newResults` card |
 | Cost estimates | `GET /api/estimates`, `GET /api/estimates/{serviceId}` | Computed by the cost engine from the member's plan, with a line-by-line breakdown per provider. The chat quotes these |
-| Open enrollment | `GET /api/enrollment/2027` | Next year's plans priced against this year's care; flags doctors who'd be out of network |
 | Raw record | `GET /api/fhir` | FHIR R4 Bundle everything is built from |
 | LLM usage | `GET /api/metrics` | Bedrock calls, input/output tokens by purpose, chat cache hits, timeouts |
 

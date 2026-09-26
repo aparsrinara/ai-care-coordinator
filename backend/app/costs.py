@@ -32,15 +32,9 @@ SERVICES = {
 CATEGORIES = ("preventive", "primary_care", "specialist", "physical_therapy", "lab", "imaging",
               "urgent_care", "emergency", "generic_rx")
 
-# Maya's care this year, from her claims. Used to project next year's costs.
-UTILIZATION_2026 = [
-    ("annual_physical", 1), ("primary_care", 2), ("specialist", 2), ("derm_new_visit", 1),
-    ("pt_visit", 12), ("lab_panel", 2), ("urgent_care", 1), ("generic_90day", 4),
-]
 
 
-def engine_plan(b: dict, name: str, plan_type: str, out_of_network=(), premium: float = 0,
-                employer_hsa: float = 0, referrals_required: bool = False) -> dict:
+def engine_plan(b: dict, name: str, plan_type: str, out_of_network=()) -> dict:
     """Turn a benefits dict (see insurance.BENEFIT_FIELDS) into engine rules."""
     hdhp = plan_type == "HDHP"
 
@@ -63,8 +57,7 @@ def engine_plan(b: dict, name: str, plan_type: str, out_of_network=(), premium: 
         "name": name, "type": plan_type, "deductible": b["deductible"], "oopMax": b["oopMax"],
         "coinsurance": b["coinsurance"], "oonCoinsurance": b.get("oonCoinsurance", 0.4),
         "rx": {"preferred": b.get("genericRx90Copay", 20), "non-preferred": b.get("genericRx90NonPreferred", 58)},
-        "outOfNetwork": set(out_of_network), "rules": rules, "premiumYear": premium,
-        "employerHsa": employer_hsa, "referralsRequired": referrals_required,
+        "outOfNetwork": set(out_of_network), "rules": rules,
     }
 
 
@@ -146,39 +139,3 @@ def estimate(service_id: str, plan: dict, deductible_met: float, oop_met: float)
 
 def all_estimates(plan: dict, deductible_met: float, oop_met: float) -> list[dict]:
     return [estimate(sid, plan, deductible_met, oop_met) for sid in SERVICES if sid != "annual_physical"]
-
-
-def project_year(plan: dict, utilization=UTILIZATION_2026) -> dict:
-    """Total yearly cost (premiums + out-of-pocket - employer HSA money) for a pattern of care."""
-    t = Tracker(plan)
-    out_of_network = []
-    for service_id, count in utilization:
-        svc = SERVICES[service_id]
-        label, provider_id, price = svc["options"][0]
-        if provider_id in plan["outOfNetwork"]:
-            out_of_network.append(label)
-        for _ in range(count):
-            t.charge(price, svc["category"], provider_id)
-    oop = round(t.total_paid)
-    return {
-        "name": plan["name"], "type": plan["type"],
-        "premium": plan["premiumYear"], "outOfPocket": oop, "employerHsa": plan["employerHsa"],
-        "total": plan["premiumYear"] + oop - plan["employerHsa"],
-        "deductible": plan["deductible"], "oopMax": plan["oopMax"],
-        "referralsRequired": plan["referralsRequired"],
-        "outOfNetworkForYou": sorted(set(out_of_network)),
-        "worstCase": plan["premiumYear"] + plan["oopMax"] - plan["employerHsa"],
-    }
-
-
-def compare_plans(plans: dict[str, dict], current_id: str) -> dict:
-    options = []
-    for pid, plan in plans.items():
-        options.append(dict(project_year(plan), planId=pid, current=pid == current_id))
-    current = next(o for o in options if o["current"])
-    for o in options:
-        o["vsCurrent"] = o["total"] - current["total"]
-    # Cheapest plan that keeps all of the member's doctors in network.
-    best = min((o for o in options if not o["outOfNetworkForYou"]), key=lambda o: o["total"])
-    return {"basis": "This year's care: " + ", ".join(f"{n} {SERVICES[s]['name'].lower()}" for s, n in UTILIZATION_2026),
-            "options": sorted(options, key=lambda o: o["total"]), "recommended": best["planId"]}

@@ -706,35 +706,6 @@ def estimate(service_id: str, x_session_id: str | None = Header(None)):
     return dict(_estimate(s, service_id), note=_estimates_note(s))
 
 
-# ---------- open enrollment ----------
-
-@app.get("/api/enrollment/2027")
-def enrollment(x_session_id: str | None = Header(None)):
-    """Next year's plan options, priced against the member's care this year."""
-    return _enrollment_for(session(x_session_id))
-
-
-def _enrollment_for(s: dict) -> dict:
-    ins = s["insurance"]
-    window = insurance.ENROLLMENT_WINDOWS[ins["coverageSource"]]
-    if window is None:
-        return {"window": None, "headline": "Medicaid doesn't have an open enrollment period. Your coverage renews each year; "
-                "I'll remind you when your renewal paperwork is due.", "options": [], "recommended": None}
-    cmp = costs.compare_plans(insurance.alternatives(ins), "current")
-    rec = next(o for o in cmp["options"] if o["planId"] == cmp["recommended"])
-    cheapest = cmp["options"][0]
-    if rec["current"]:
-        headline = "Your current plan is still your best option for next year, based on this year's care."
-    else:
-        headline = f"Switching to {rec['name']} would save you about ${-rec['vsCurrent']:,.0f} next year and keep all your doctors."
-    if cheapest["planId"] != rec["planId"]:
-        headline += (f" {cheapest['name']} costs less, but {', '.join(cheapest['outOfNetworkForYou'])} "
-                     f"would be out of network.")
-    return {"window": window, "headline": headline, **cmp,
-            "caveat": "Based on this year's care. A bigger year (surgery, a new diagnosis) changes the math, so check each plan's worst case. "
-                      "Other plans use typical premiums and benefits until next year's plan documents are out."}
-
-
 # ---------- 6. ask about costs ----------
 
 CHAT_RULES = """You are the AI care coordinator in a health app. Answer the member's questions about what care will cost, what their plan covers and how to use their benefits, using only the plan data, record and documents below. Today is Sep 25, 2026.
@@ -761,7 +732,6 @@ FALLBACK_SERVICES = [
 
 # ---------- token budget: only send the model what this question needs ----------
 
-ENROLL_RE = r"switch|next year|2027|enroll|change (my )?plan|better plan|which plan|hsa|hmo|ppo"
 CARE_RE = r"\bpt\b|therap|refill|pharm|derm|skin|lab|book|appoint|approv|result"
 STOPWORDS = set("what will much does cost costs have with that this from your about there their would could should "
                 "when where which plan my the and for are how can get".split())
@@ -814,17 +784,6 @@ def _chat_system(s: dict, q: str) -> str:
                "never recompute them):\n" + "\n".join(lines))
     if _estimates_note(s):
         system += "\n(" + _estimates_note(s) + ")"
-
-    if re.search(ENROLL_RE, q, re.I):
-        enroll = _enrollment_for(s)
-        system += (f"\n\n2027 OPEN ENROLLMENT ({enroll['window'] or 'none'}), priced against this year's care by the cost "
-                   "engine. Comparing plans on cost and networks is part of your job, not medical advice: answer with "
-                   "the recommendation below.\n" + enroll["headline"])
-        system += "".join(f"\n- {o['name']}{' (current)' if o['current'] else ''}: about ${o['total']:,.0f}/yr "
-                          f"(premium ${o['premium']:,.0f} + out-of-pocket ${o['outOfPocket']:,.0f}"
-                          + (f" - employer HSA ${o['employerHsa']:,.0f}" if o['employerHsa'] else "") + ")"
-                          + (f", out of network: {', '.join(o['outOfNetworkForYou'])}" if o['outOfNetworkForYou'] else "")
-                          for o in enroll.get("options", []))
 
     excerpts = _doc_excerpts(s["docText"], q)
     if excerpts:

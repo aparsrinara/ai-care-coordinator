@@ -54,16 +54,6 @@ TYPICAL = {
                  "specialistCopay": 0, "urgentCareCopay": 0, "emergencyCopay": 0, "physicalTherapyCopay": 0,
                  "genericRx90Copay": 0, "genericRx90NonPreferred": 0},
 }
-TYPICAL_PREMIUM_YEAR = {"PPO": 3480, "POS": 3100, "EPO": 2900, "HMO": 2640, "HDHP": 1560,
-                        "Medicare Advantage": 0, "Medicaid": 0}
-
-ENROLLMENT_WINDOWS = {
-    "employer": "Your employer's open enrollment, usually in November",
-    "marketplace": "Nov 1, 2026 - Jan 15, 2027 on HealthCare.gov or your state marketplace",
-    "medicare": "Oct 15 - Dec 7, 2026 (Medicare Annual Enrollment)",
-    "medicaid": None,
-}
-
 # Common US payers for the plan search box. Members can type any name.
 PAYER_DIRECTORY = [
     {"name": "Aetna", "subtitle": "Employer, individual and Medicare plans"},
@@ -158,7 +148,7 @@ def from_entry(entry: dict) -> dict:
         "groupNumber": (entry.get("groupNumber") or "").strip(),
         "rxBin": (entry.get("rxBin") or "").strip(),
         "coverage": entry.get("coverage") or "Just you",
-        "premiumYear": premium * 12 if premium is not None else TYPICAL_PREMIUM_YEAR[plan_type],
+        "premiumYear": premium * 12 if premium is not None else None,
         "premiumSource": "entered" if premium is not None else "typical",
         "benefits": benefits,
         "benefitSources": sources,
@@ -221,22 +211,7 @@ def _extract(text: str) -> dict | None:
 # ---------- views used by the API ----------
 
 def engine(ins: dict) -> dict:
-    return costs.engine_plan(ins["benefits"], ins["planName"], ins["planType"], premium=ins["premiumYear"])
-
-
-def alternatives(ins: dict) -> dict[str, dict]:
-    """Next year's options: the current plan plus the payer's other common plan types."""
-    plans = {"current": engine(ins)}
-    for t in ("HMO", "HDHP", "PPO"):
-        if t == ins["planType"]:
-            continue
-        b = dict(TYPICAL[t])
-        plans[t.lower()] = costs.engine_plan(
-            b, f"{ins['payer']} {t}", t, premium=TYPICAL_PREMIUM_YEAR[t],
-            employer_hsa=1000 if t == "HDHP" and ins["coverageSource"] == "employer" else 0,
-            # Narrow network: the dummy record's dermatologist and hospital aren't in it.
-            out_of_network={"dr-lee", "st-marys"} if t == "HMO" else (), referrals_required=t == "HMO")
-    return plans
+    return costs.engine_plan(ins["benefits"], ins["planName"], ins["planType"])
 
 
 def display(ins: dict) -> dict:
