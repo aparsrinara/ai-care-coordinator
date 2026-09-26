@@ -4,6 +4,7 @@ Each visitor gets their own demo state, keyed by the X-Session-Id header (the
 UI generates a random id and keeps it in localStorage). State lives in memory
 and resets when the server restarts.
 """
+import hashlib
 import io
 import json
 import logging
@@ -33,6 +34,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # ---------- per-visitor state ----------
 
 MAX_SESSIONS = 1000
+SESSION_TTL_SECONDS = 12 * 3600
 MAX_DOC_CHARS = 30000
 _sessions: OrderedDict[str, dict] = OrderedDict()
 _lock = threading.Lock()
@@ -50,17 +52,24 @@ def _fresh() -> dict:
         "docs": [dict(d) for d in D.DEFAULT_DOCS],
         "docText": "",
         "chat": [],
+        "_seen": time.time(),
     }
 
 
 def session(sid: str | None) -> dict:
     sid = (sid or "default")[:64]
+    now = time.time()
     with _lock:
+        # Oldest-used first, so expired sessions are at the front.
+        while _sessions:
+            oldest = next(iter(_sessions.values()))
+            if now - oldest["_seen"] < SESSION_TTL_SECONDS and len(_sessions) <= MAX_SESSIONS:
+                break
+            _sessions.popitem(last=False)
         if sid not in _sessions:
             _sessions[sid] = _fresh()
-            if len(_sessions) > MAX_SESSIONS:
-                _sessions.popitem(last=False)
         _sessions.move_to_end(sid)
+        _sessions[sid]["_seen"] = now
         return _sessions[sid]
 
 
@@ -175,6 +184,14 @@ def _startup():
 @app.get("/api/health")
 def health():
     return {"ok": True, "model": llm.MODEL_ID, "visitSummary": _visit_summary["source"]}
+
+
+@app.get("/api/metrics")
+def metrics():
+    """LLM usage since the server started."""
+    st = llm.STATS
+    return {**st, "avgSeconds": round(st["seconds"] / st["calls"], 2) if st["calls"] else None,
+            "chatCache": {**CACHE_STATS, "entries": len(_reply_cache)}, "sessions": len(_sessions)}
 
 
 @app.post("/api/reset")
@@ -597,7 +614,7 @@ def _enrollment_for(s: dict) -> dict:
 
 # ---------- 6. ask about costs ----------
 
-CHAT_RULES = """You are the AI care coordinator in a health app. The member is {name}. Answer their questions about what care will cost, what their plan covers and how to use their benefits, using only the plan data, record and documents below. Today is Sep 25, 2026.
+CHAT_RULES = """You are the AI care coordinator in a health app. Answer the member's questions about what care will cost, what their plan covers and how to use their benefits, using only the plan data, record and documents below. Today is Sep 25, 2026.
 Rules:
 - First line: the direct answer, with the dollar amount in **bold**. When there are several places to get care, lead with the cheapest in-network option.
 - Money: copy the amounts and breakdown lines from COST ESTIMATES word for word. Never add, change or invent a charge.
@@ -609,37 +626,7 @@ Rules:
 - Under 90 words. Plain text only: "- " bullets and **bold**, no headings, no tables.
 
 PLAN DATA (JSON):
-{plan}
-
-CURRENT CARE:
-{care}"""
-
-
-def _chat_system(s: dict) -> str:
-    stage = pt_stage(s)
-    care = [f"- {v['title']}: {v['status']}. {v['detail']}" for v in _t(list(D.NEXT_STEPS.values()), s)]
-    care.append(f"- Physical therapy: {_pt_step(s)['detail']}")
-    system = CHAT_RULES.format(name=s["account"]["name"], plan=json.dumps(insurance.display(s["insurance"])),
-                               care="\n".join(care))
-    b = s["insurance"]["benefits"]
-    est_lines = []
-    for e in costs.all_estimates(insurance.engine(s["insurance"]), b["deductibleMet"], b["oopMet"]):
-        opts = "; ".join(f"{o['provider']}: you pay ${o['youPay']:,.0f} ("
-                         + ", ".join(f"{b['label']} ${b['amount']:,.0f}" for b in o["breakdown"]) + ")"
-                         for o in e["options"])
-        est_lines.append(f"- {e['service']}{' (needs prior authorization)' if e['requiresPriorAuth'] else ''}: {opts}")
-    system += ("\n\nCOST ESTIMATES from the app's cost engine (these are exact: quote these numbers and this math, "
-               "never recompute them):\n" + "\n".join(est_lines))
-    if _estimates_note(s):
-        system += "\n(" + _estimates_note(s) + ")"
-    enroll = _enrollment_for(s)
-    system += f"\n\n2027 OPEN ENROLLMENT ({enroll['window'] or 'none'}): " + enroll["headline"]
-    if stage < 5:
-        system += "\n- PT is not approved yet, so don't say it's booked."
-    if s["docText"]:
-        system += ("\n\nTEXT FROM DOCUMENTS THE MEMBER UPLOADED (may be a real plan; prefer it over the JSON "
-                   "when they conflict, and name the document):\n" + s["docText"][:24000])
-    return system
+{plan}"""
 
 
 FALLBACK_SERVICES = [
@@ -647,6 +634,94 @@ FALLBACK_SERVICES = [
     (r"\ber\b|emergency", "er_visit"), (r"refill|pharm|prescri|\bmed|drug", "generic_90day"),
     (r"derm|skin|mole|specialist", "derm_new_visit"), (r"primary|checkup|doctor visit", "primary_care"),
 ]
+
+
+# ---------- token budget: only send the model what this question needs ----------
+
+ENROLL_RE = r"switch|next year|2027|enroll|change (my )?plan|better plan|which plan|hsa|hmo|ppo"
+CARE_RE = r"\bpt\b|therap|refill|pharm|derm|skin|lab|book|appoint|approv|result"
+STOPWORDS = set("what will much does cost costs have with that this from your about there their would could should "
+                "when where which plan my the and for are how can get".split())
+DOC_CHUNK = 1200
+DOC_TOP_K = 2
+
+
+def _matched_services(q: str) -> list[str]:
+    return [sid for pattern, sid in FALLBACK_SERVICES if re.search(pattern, q, re.I)]
+
+
+def _doc_excerpts(doc_text: str, q: str) -> str:
+    """Keyword retrieval: the few document chunks that mention the question's words."""
+    words = {w for w in re.findall(r"[a-z]{4,}", q.lower()) if w not in STOPWORDS}
+    if not doc_text or not words:
+        return ""
+    chunks = [doc_text[i:i + DOC_CHUNK] for i in range(0, len(doc_text), DOC_CHUNK)]
+    scored = sorted(((sum(c.lower().count(w) for w in words), i) for i, c in enumerate(chunks)), reverse=True)
+    picked = sorted(i for score, i in scored[:DOC_TOP_K] if score > 0)
+    return "\n...\n".join(chunks[i] for i in picked)
+
+
+def _chat_system(s: dict, q: str) -> str:
+    ins = s["insurance"]
+    plan = {k: v for k, v in insurance.display(ins).items() if v not in (None, [], {})}
+    system = CHAT_RULES.format(plan=json.dumps(plan, separators=(",", ":")))
+
+    if re.search(CARE_RE, q, re.I):
+        care = [f"- {v['title']}: {v['status']}. {v['detail']}" for v in _t(list(D.NEXT_STEPS.values()), s)]
+        care.append(f"- Physical therapy: {_pt_step(s)['detail']}")
+        if pt_stage(s) < 5:
+            care.append("- PT is not approved yet, so don't say it's booked.")
+        system += "\n\nCURRENT CARE:\n" + "\n".join(care)
+
+    b = ins["benefits"]
+    eng = insurance.engine(ins)
+    matched = _matched_services(q)
+    if matched:  # full breakdown, only for the services asked about
+        lines = []
+        for sid in matched:
+            e = costs.estimate(sid, eng, b["deductibleMet"], b["oopMet"])
+            opts = "; ".join(f"{o['provider']}: you pay ${o['youPay']:,.0f} ("
+                             + ", ".join(f"{x['label']} ${x['amount']:,.0f}" for x in o["breakdown"]) + ")"
+                             for o in e["options"])
+            lines.append(f"- {e['service']}{' (needs prior authorization)' if e['requiresPriorAuth'] else ''}: {opts}")
+    else:  # one line per service so general questions still have numbers
+        lines = [f"- {e['service']}: ${e['cheapest']['youPay']:,.0f} at {e['cheapest']['provider']}"
+                 for e in costs.all_estimates(eng, b["deductibleMet"], b["oopMet"])]
+    system += ("\n\nCOST ESTIMATES from the app's cost engine (exact: quote these numbers and this math, "
+               "never recompute them):\n" + "\n".join(lines))
+    if _estimates_note(s):
+        system += "\n(" + _estimates_note(s) + ")"
+
+    if re.search(ENROLL_RE, q, re.I):
+        enroll = _enrollment_for(s)
+        system += (f"\n\n2027 OPEN ENROLLMENT ({enroll['window'] or 'none'}), priced against this year's care by the cost "
+                   "engine. Comparing plans on cost and networks is part of your job, not medical advice: answer with "
+                   "the recommendation below.\n" + enroll["headline"])
+        system += "".join(f"\n- {o['name']}{' (current)' if o['current'] else ''}: about ${o['total']:,.0f}/yr "
+                          f"(premium ${o['premium']:,.0f} + out-of-pocket ${o['outOfPocket']:,.0f}"
+                          + (f" - employer HSA ${o['employerHsa']:,.0f}" if o['employerHsa'] else "") + ")"
+                          + (f", out of network: {', '.join(o['outOfNetworkForYou'])}" if o['outOfNetworkForYou'] else "")
+                          for o in enroll.get("options", []))
+
+    excerpts = _doc_excerpts(s["docText"], q)
+    if excerpts:
+        system += ("\n\nEXCERPTS FROM DOCUMENTS THE MEMBER UPLOADED (may be a real plan; prefer them over the "
+                   "plan data when they conflict, and name the document):\n" + excerpts)
+    return system
+
+
+# Identical prompt -> identical answer. Judges tapping the same suggestion chips in the
+# same demo state share one Bedrock call.
+_reply_cache: OrderedDict[str, str] = OrderedDict()
+REPLY_CACHE_SIZE = 500
+CACHE_STATS = {"hits": 0, "misses": 0}
+
+
+def _cache_key(system: str, history: list[dict], q: str) -> str:
+    norm_q = re.sub(r"[^a-z0-9 ]", "", q.lower()).strip()
+    return hashlib.sha256(json.dumps([system, history, norm_q]).encode()).hexdigest()
+
+
 
 
 def _canned(s: dict, q: str) -> str:
@@ -698,12 +773,25 @@ def chat(body: Ask, x_session_id: str | None = Header(None)):
     if not q:
         raise HTTPException(400, "Empty message")
     s = session(x_session_id)
-    history = s["chat"][-8:]
-    reply = llm.complete(_chat_system(s), history + [{"role": "user", "text": q}], effort="low")
-    reply = _plain(reply) if reply else None
-    source = "bedrock"
-    if not reply:
-        reply, source = _canned(s, q), "fallback"
+    history = s["chat"][-4:]
+    system = _chat_system(s, q)
+    key = _cache_key(system, history, q)
+    if key in _reply_cache:
+        _reply_cache.move_to_end(key)
+        CACHE_STATS["hits"] += 1
+        reply, source = _reply_cache[key], "cache"
+    else:
+        CACHE_STATS["misses"] += 1
+        reply = llm.complete(system, history + [{"role": "user", "text": q}], max_tokens=700, effort="low", purpose="chat",
+                             deadline=12)
+        reply = _plain(reply) if reply else None
+        source = "bedrock"
+        if reply:
+            _reply_cache[key] = reply
+            if len(_reply_cache) > REPLY_CACHE_SIZE:
+                _reply_cache.popitem(last=False)
+        else:
+            reply, source = _canned(s, q), "fallback"
     s["chat"] += [{"role": "user", "text": q}, {"role": "assistant", "text": reply}]
     return {"reply": reply, "source": source}
 

@@ -50,3 +50,14 @@ member's name, payer and copays.
 | Cost estimates | `GET /api/estimates`, `GET /api/estimates/{serviceId}` | Computed by the cost engine from the member's plan, with a line-by-line breakdown per provider. The chat quotes these |
 | Open enrollment | `GET /api/enrollment/2027` | Next year's plans priced against this year's care; flags doctors who'd be out of network |
 | Raw record | `GET /api/fhir` | FHIR R4 Bundle everything is built from |
+| LLM usage | `GET /api/metrics` | Bedrock calls, input/output tokens by purpose, chat cache hits, timeouts |
+
+## Token budget
+
+- Chat sends only what the question needs: the estimates for the services asked about, the plan comparison
+  only for plan questions, and the 2 best-matching chunks of uploaded documents (not the whole document).
+- Identical prompts share one cached answer (`source: "cache"`), so judges tapping the same suggestions cost one call.
+- Visit summary and lab explanation are generated once per server start; plan-document extraction is cached by file hash.
+- gpt-oss runs with low reasoning effort for chat, and every call has a hard deadline (12s for chat) with a
+  cost-engine fallback, so a slow Bedrock never hangs the demo.
+- Sessions expire after 12h idle (max 1000 in memory).

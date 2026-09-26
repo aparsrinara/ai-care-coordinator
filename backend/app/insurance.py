@@ -6,6 +6,7 @@ documents for exact numbers". In production, benefits and accumulators come from
 an X12 270/271 eligibility check through a clearinghouse, or the plan's Patient
 Access API; the member only types (or scans) payer + member ID.
 """
+import hashlib
 import json
 import re
 
@@ -181,8 +182,22 @@ Use the individual (not family) amounts. If a service says "deductible then X% c
 A 30-day generic copay times 3 is fine for the 90-day fields only if no 90-day amount is given."""
 
 
+_extract_cache: dict[str, dict] = {}
+
+
 def extract_benefits(text: str) -> dict | None:
-    out = llm.complete(EXTRACT_SYSTEM, [{"role": "user", "text": text[:24000]}], max_tokens=2000)
+    """Cached by document hash: the same SBC uploaded twice costs one Bedrock call."""
+    key = hashlib.sha256(text[:24000].encode()).hexdigest()
+    if key in _extract_cache:
+        return dict(_extract_cache[key])
+    result = _extract(text)
+    if result:
+        _extract_cache[key] = result
+    return dict(result) if result else None
+
+
+def _extract(text: str) -> dict | None:
+    out = llm.complete(EXTRACT_SYSTEM, [{"role": "user", "text": text[:24000]}], max_tokens=2000, purpose="benefits_extraction")
     if not out:
         return None
     m = re.search(r"\{.*\}", out, re.S)
