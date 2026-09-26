@@ -29,7 +29,7 @@ CONNECTIONS = {
 FOUND_FROM_CLAIMS = [
     {"id": "portal", "kind": "health_system", "name": "Northside Health", "detail": "6 visits · Dr. Priya Nair, primary care",
      "what": "Patient portal: visit notes, labs, referrals", "linkable": True, "required": True},
-    {"id": "pharmacy", "kind": "pharmacy", "name": "Main St Drug", "detail": "4 prescription fills",
+    {"id": "pharmacy", "kind": "pharmacy", "name": "Elm St Pharmacy", "detail": "4 prescription fills",
      "what": "Tracked through your pharmacy claims. No login needed", "linkable": False},
     {"id": "clearview", "kind": "imaging", "name": "Clearview Imaging", "detail": "1 visit · no portal to link",
      "what": "Tracked through your claims", "linkable": False},
@@ -41,10 +41,10 @@ FOUND_FROM_CLAIMS = [
 NEXT_STEPS = {
     "labs": {"title": "Fasting labs", "status": "booked", "channel": "phone_call",
              "detail": "Mon 9/28, 7:40 AM at Northside Lab. I'll remind you to stop eating after 9 PM Sunday."},
-    "refill": {"title": "90-day refill", "status": "ordered", "channel": "pharmacy",
-               "detail": "Moved it from Main St Drug to Elm St Pharmacy, which is in your plan's preferred network: {rx_pref} instead of {rx_non}. Ready Saturday."},
+    "refill": {"title": "90-day prescription", "status": "ordered", "badge": "Ready Sat", "channel": "pharmacy",
+               "detail": "Dr. Nair sent it to Elm St Pharmacy, your pharmacy on file. {rx_pref} with your plan. When refills run out, I'll request a renewal through your portal."},
     "derm": {"title": "Dermatology referral", "status": "booked", "channel": "phone_call",
-             "detail": "Confirmed Dr. Lee's office has Dr. Nair's referral notes, then booked Oct 7. I grabbed a cancellation, 5 weeks sooner.",
+             "detail": "Confirmed Dr. Lee's office has your referral, then booked Oct 7. I grabbed a cancellation, 5 weeks sooner.",
              "callId": "derm"},
 }
 
@@ -57,9 +57,9 @@ PT_STEPS = [
 PT_STEP_SECONDS = 2.2  # sped up for the demo; real prior auths take 2-10 business days
 
 UPCOMING = [
-    {"dow": "SAT", "day": "26", "title": "90-day refill ready", "detail": "Elm St Pharmacy · saved {rx_saved}", "status": "Ordered", "tone": "info", "date": "2026-09-26"},
+    {"dow": "SAT", "day": "26", "title": "90-day prescription ready", "detail": "Elm St Pharmacy · {rx_pref} with your plan", "status": "Ready", "tone": "info", "date": "2026-09-26"},
     {"dow": "MON", "day": "28", "title": "Fasting blood work", "detail": "7:40 AM · Northside Lab", "status": "Booked", "tone": "ok", "date": "2026-09-28"},
-    {"dow": "WED", "day": "7", "title": "Dermatology skin check", "detail": "Oct 7, 8:15 AM · Dr. Lee", "status": "Booked", "tone": "ok", "date": "2026-10-07"},
+    {"dow": "WED", "day": "7", "title": "Dermatology skin check", "detail": "Oct 7 · grabbed a cancellation", "status": "Booked", "tone": "ok", "date": "2026-10-07"},
 ]
 PT_UPCOMING = {"dow": "TUE", "day": "6", "title": "Physical therapy, visit 1", "detail": "Oct 6, 5:30 PM · Motion PT",
                "status": "Booked", "tone": "ok", "date": "2026-10-06"}
@@ -92,11 +92,10 @@ RECAP = {
     "intro": {"title": "{first}, your Year in Care is here.", "subtitle": "You showed up for yourself 14 times this year. Here's what that looked like."},
     "numbers": {"appointmentsKept": 14, "refillsOnTime": 11, "refillsTotal": 11, "hoursSaved": 31},
     "money": {
-        "total": 2860,
+        "total": 2445,
         "breakdown": [
-            {"label": "Sent to in-network care", "amount": 1650},
+            {"label": "Cheaper in-network options I found", "amount": 1650},
             {"label": "Price-shopped prescriptions", "amount": 610},
-            {"label": "FSA dollars used, not lost", "amount": 415},
             {"label": "Billing errors caught", "amount": 185},
         ],
         "biggestWin": "Sending you to in-network specialists instead of out-of-network ones saved $1,650.",
@@ -110,16 +109,16 @@ RECAP = {
             {"label": "Benefits used", "value": "72%", "grade": "B"},
         ],
     },
-    "nextYear": "Your physical and eye exam are both covered. I'll book them in January, plus the dental cleaning you skipped.",
-    "shareText": "My 2026 Year in Care: 14 appointments kept, 11 of 11 refills on time, $2,860 kept in my pocket. Care score 86.",
+    "nextYear": "Your 2027 physical is covered at $0. I'll book it in January, and track your new deductible from day one.",
+    "shareText": "My 2026 Year in Care: 14 appointments kept, 11 of 11 refills on time, $2,445 kept in my pocket. Care score 86.",
 }
 
 CHAT_SUGGESTIONS = [
-    "What will my PT cost?",
-    "How do I get the most out of my benefits?",
+    "How much will a knee MRI cost me?",
+    "Where am I on my deductible?",
     "Is urgent care covered?",
-    "How do I use my FSA before it expires?",
-    "Cheapest place for my refill?",
+    "What will my PT cost?",
+    "Should I switch plans next year?",
 ]
 
 # Used when Bedrock is unreachable, so the demo never dead-ends on stage.
@@ -129,7 +128,7 @@ CANNED_ANSWERS = [
     (r"fsa|flexible|spend", "You have **$640** left in your FSA, and it doesn't roll over after Dec 31.\n- Your PT copays (about $480) can come straight from it.\n- Other eligible buys: glasses or contacts, sunscreen SPF 15+, first-aid supplies.\n- Want a reminder on Dec 1 to use what's left?"),
     (r"urgent|walk.?in", "**$75 copay** at an in-network urgent care, and the deductible doesn't apply.\n- An ER visit would be **$350** after your deductible.\n- If it's an emergency, go to the ER or call 911."),
     (r"\ber\b|emergency", "An in-network ER visit is **$350 after your deductible** ($380 of it is left).\n- Urgent care is a $75 copay for things that aren't emergencies.\n- If it's an emergency, go to the ER or call 911."),
-    (r"refill|pharm|prescri|\bmed", "Your 90-day refill is **$20** at Elm St Pharmacy (preferred network).\n- At Main St Drug, your usual pharmacy, it's about $58.\n- Mail order is also $20 but takes 5 to 7 days.\n- I already moved this refill to Elm St. It's ready Saturday."),
+    (r"refill|pharm|prescri|\bmed", "Your 90-day refill is **$20** at Elm St Pharmacy, your pharmacy on file (preferred network).\n- A non-preferred pharmacy would be about $58.\n- Mail order is also $20 but takes 5 to 7 days.\n- It's ready Saturday."),
     (r"dental|clean|teeth", "**$0.** Cleanings are covered at 100%, twice a year, and you haven't used either in 2026.\n- Want me to book one before December?"),
     (r"eye|vision|glasses", "Your eye exam is a **$10 copay**, once a year, and you haven't used it in 2026.\n- Glasses or contacts can be paid with your FSA ($640 left)."),
     (r"derm|skin|mole", "Your Oct 7 dermatology visit should cost **$50**, your specialist copay.\n- If Dr. Lee removes or biopsies the mole, that's billed separately at deductible plus 20%."),

@@ -2,17 +2,947 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2E1540">
 <title>Care Coordinator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=DM+Sans:wght@400;500;600;700&display=swap">
 <style>
-  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#2E1540;color:#fff;font:16px system-ui,sans-serif;text-align:center;padding:16px}
-  p{color:#E7DDEB}
+:root{
+  color-scheme: light;
+  --plum:#2E1540; --plum-2:#4A2360; --plum-3:#6E4D80; --ink:#1F1B2E; --muted:#6B6377; --muted-2:#4A4458;
+  --cream:#F6F2EC; --card:#FFFDF9; --line:#E7DFD3; --line-2:#EFE8DD; --lav:#F1ECF4; --lav-2:#E7DDEB;
+  --peach:#F4B8A3; --clay:#C9603F; --gold:#F7D98B; --night:#1E0F29;
+  --ok-bg:#E3F0E6; --ok:#1F5A32; --ok-dot:#2F7A48; --info-bg:#E4ECF7; --info:#1E4C8A;
+  --warn-bg:#FBEBD6; --warn:#8A4B0F; --warn-soft:#FFF6EA; --warn-line:#F0D9B8;
+  --ground:#E4DCE6;
+  --serif:'Fraunces',Georgia,'Times New Roman',serif;
+  --sans:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:15px;-webkit-font-smoothing:antialiased}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--plum-2)}
+:focus-visible{outline:3px solid var(--clay);outline-offset:2px;border-radius:6px}
+[hidden]{display:none!important}
+
+.stage{min-height:100%;display:flex;align-items:center;justify-content:center;gap:48px;padding:24px 16px}
+.phone{position:relative;width:390px;height:min(844px,calc(100dvh - 48px));min-height:640px;background:var(--cream);border-radius:44px;overflow:hidden;box-shadow:0 0 0 10px #16091F,0 30px 80px rgba(30,15,41,.35);flex-shrink:0}
+#app{position:absolute;inset:0}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:28px 20px 24px;display:flex;flex-direction:column;gap:16px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+
+/* side panel */
+.panel{width:300px;display:flex;flex-direction:column;gap:16px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:36px;height:36px;border-radius:12px;background:var(--plum);display:grid;place-items:center;color:var(--peach);flex-shrink:0}
+.panel h1{margin:0;font-family:var(--serif);font-size:26px;font-weight:700;color:var(--plum)}
+.panel p{margin:0;color:var(--muted-2);line-height:1.5}
+.panel h2{margin:0;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--plum-2)}
+.jumps{display:flex;flex-direction:column;gap:6px}
+.jump{display:flex;align-items:center;gap:10px;text-align:left;min-height:40px;padding:8px 12px;border-radius:12px;border:1px solid transparent;background:rgba(255,253,249,.55);font-weight:600}
+.jump:hover{background:var(--card);border-color:var(--line)}
+.jump.on{background:var(--card);border-color:var(--plum-3)}
+.jump .n{width:22px;height:22px;border-radius:11px;background:var(--plum);color:#fff;font-size:12px;display:grid;place-items:center;flex-shrink:0}
+.jump small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.linkbtn{align-self:flex-start;background:none;border:none;padding:6px 0;color:var(--plum-2);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.fine{font-size:12px;color:var(--muted);line-height:1.45}
+
+/* shared */
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.h1{margin:0;font-family:var(--serif);font-size:30px;font-weight:600;line-height:1.15;text-wrap:balance}
+.h2{margin:0;font-size:17px;font-weight:700}
+.label{margin:0;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--plum-2)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px}
+.pad{padding:16px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:12px;align-items:center}
+.grow{flex:1;min-width:0}
+.muted{color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.pill{flex-shrink:0;font-size:12px;font-weight:700;padding:4px 8px;border-radius:8px;white-space:nowrap;align-self:flex-start}
+.p-ok{background:var(--ok-bg);color:var(--ok)} .p-info{background:var(--info-bg);color:var(--info)} .p-warn{background:var(--warn-bg);color:var(--warn)} .p-plum{background:var(--lav);color:var(--plum-2)}
+.btn{min-height:48px;border-radius:14px;border:none;background:var(--plum);color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 18px;text-decoration:none;width:100%}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.ghost{background:transparent;border:1px solid #CFC3D6;color:var(--plum-2);font-size:15px;min-height:44px}
+.btn.peach{background:var(--peach);color:var(--plum)}
+.btn.sm{min-height:40px;font-size:14px;border-radius:12px;width:auto;padding:0 14px}
+.back{align-self:flex-start;min-height:44px;margin:-12px 0 -6px -6px;padding:0 6px;background:none;border:none;display:flex;align-items:center;gap:4px;font-weight:600;color:var(--plum-2)}
+.list > * + *{border-top:1px solid var(--line-2)}
+.item{display:flex;gap:12px;align-items:center;padding:12px 14px;width:100%;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left}
+.item-t{font-weight:600;font-size:15px}
+.item-s{font-size:13px;color:var(--muted);margin-top:2px;line-height:1.4}
+.date{width:44px;height:44px;border-radius:12px;background:var(--lav);color:var(--plum-2);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;flex-shrink:0}
+.date span{font-size:10px;font-weight:700} .date b{font-size:17px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;padding:7px 10px;border-radius:999px;background:var(--card);border:1px solid var(--line)}
+.dot{width:8px;height:8px;border-radius:4px;background:var(--ok-dot)}
+.ask{min-height:52px;padding:0 16px;border-radius:16px;background:var(--card);border:1px solid #D9CFC2;display:flex;align-items:center;gap:10px;color:var(--muted);font-size:15px;width:100%;text-align:left}
+.note{font-size:13px;line-height:1.45;color:var(--muted-2);display:flex;gap:10px;align-items:flex-start}
+.warnbox{background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:18px;padding:14px 16px;display:flex;gap:12px}
+.center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:var(--muted);padding:24px}
+
+/* tabs */
+.tabs{flex-shrink:0;height:84px;padding-top:10px;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:flex-start}
+.tab{width:76px;min-height:44px;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--muted);font-size:11px;font-weight:600;position:relative}
+.tab.on{color:var(--plum-2);font-weight:700}
+.badge{position:absolute;top:-4px;right:16px;min-width:16px;height:16px;border-radius:8px;background:var(--clay);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;padding:0 4px}
+
+/* agent card */
+.agent{background:var(--plum);color:#fff;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.agent .kick{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--peach)}
+.agent .say{font-family:var(--serif);font-size:22px;line-height:1.25}
+.bars{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.bars i{height:6px;border-radius:3px;background:#5A3A6B;transition:background .5s}
+.bars i.on{background:var(--peach)}
+.btn.line{background:transparent;border:1px solid var(--plum-3);color:#fff;font-size:15px;min-height:44px;width:auto}
+
+/* steps + timeline */
+.step{display:flex;gap:12px;padding:14px;width:100%;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;color:var(--ink)}
+button.step{cursor:pointer}
+.step.needs{background:var(--warn-soft)}
+.step:last-child{border-radius:0 0 18px 18px}
+.step:first-child{border-radius:18px 18px 0 0}
+.tick{width:28px;height:28px;flex-shrink:0;border-radius:14px;display:grid;place-items:center;color:#fff}
+.tick.done{background:var(--ok-dot)}
+.tick.todo{border:2px solid #B8671C}
+.tick.busy{border:2px solid var(--plum-3);border-top-color:transparent;animation:spin 1s linear infinite}
+.tick.wait{border:2px solid #CFC3D6}
+.via{display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:12px;font-weight:600;color:var(--plum-3)}
+.link-mini{margin-top:6px;display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;color:var(--plum-2);background:none;border:none;padding:0}
+.tl-i{display:flex;gap:12px;padding:8px 0;opacity:.4;transition:opacity .4s}
+.tl-i.on{opacity:1}
+.tl-i .tick{width:24px;height:24px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* meters */
+.meter{display:flex;flex-direction:column;gap:6px}
+.meter .top{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.track{height:8px;border-radius:4px;background:var(--line-2);overflow:hidden}
+.track i{display:block;height:8px;border-radius:4px;background:var(--plum-2)}
+.est{font-size:11px;font-weight:700;color:var(--warn);background:var(--warn-bg);border-radius:6px;padding:1px 6px;margin-left:6px}
+.upload{min-height:48px;border-radius:14px;border:1.5px dashed #9C8AA8;background:transparent;color:var(--plum-2);font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+.docic{width:36px;height:36px;border-radius:10px;background:var(--lav);color:var(--plum-2);display:grid;place-items:center;flex-shrink:0}
+
+/* onboarding (dark) */
+.ob{background:var(--plum);color:#fff}
+.ob .scroll{padding-top:40px}
+.ob .muted,.ob .item-s{color:#CDB6E0}
+.ob .back{color:var(--peach)}
+.ob p{color:#E7DDEB;line-height:1.5;margin:0}
+.stepper{display:flex;gap:10px;align-items:center}
+.stepper .bar{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.stepper i{height:4px;border-radius:2px;background:rgba(255,255,255,.2)}
+.stepper i.on{background:var(--peach)}
+.stepper span{font-size:12px;font-weight:700;color:#CDB6E0;white-space:nowrap}
+.conn{display:flex;align-items:center;gap:12px;padding:14px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)}
+.conn-ic{width:40px;height:40px;border-radius:12px;background:rgba(244,184,163,.16);color:var(--peach);display:grid;place-items:center;flex-shrink:0}
+.ok-txt{font-size:13px;font-weight:700;color:#9FD8B0;white-space:nowrap;display:inline-flex;gap:4px;align-items:center}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{font-size:13px;font-weight:700;color:#E7DDEB}
+.fld input,.fld select{min-height:48px;padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#fff;color-scheme:dark;width:100%}
+.fld input::placeholder{color:#9C8AA8}
+.fld-help{font-size:12px;color:#B9A6C6;line-height:1.4}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+details.more{border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:0 14px}
+details.more summary{min-height:48px;display:flex;align-items:center;font-weight:700;cursor:pointer;list-style:none}
+details.more summary::-webkit-details-marker{display:none}
+details.more[open]{padding-bottom:14px}
+.fld.light label{color:var(--ink)}
+.fld.light input{background:#fff;border-color:#CFC3D6;color:var(--ink);color-scheme:light}
+.or{display:flex;gap:10px;align-items:center;color:#CDB6E0;font-size:13px}
+.or i{flex:1;height:1px;background:rgba(255,255,255,.15)}
+.read-line{display:flex;gap:12px;align-items:center;font-size:16px;opacity:.3;transition:opacity .4s}
+.read-line.on{opacity:1}
+.mini-spin{width:18px;height:18px;border-radius:9px;border:2px solid currentColor;border-top-color:transparent;animation:spin .8s linear infinite;display:inline-block;flex-shrink:0}
+
+/* chat */
+.chat-head{flex-shrink:0;min-height:64px;padding:8px 12px;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line);background:var(--card)}
+.iconbtn{width:44px;height:44px;border-radius:22px;border:none;background:none;display:grid;place-items:center;color:var(--plum-2);flex-shrink:0}
+.msgs{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px;scrollbar-width:none}
+.me{align-self:flex-end;max-width:80%;padding:10px 14px;border-radius:18px 18px 4px 18px;background:var(--plum);color:#fff;line-height:1.4}
+.ai{align-self:flex-start;width:92%;padding:14px;border-radius:18px 18px 18px 4px;background:var(--card);border:1px solid var(--line);line-height:1.45;font-size:14px}
+.ai ul{margin:6px 0 0;padding-left:18px} .ai li{margin:3px 0}
+.src{margin-top:8px;font-size:11px;color:var(--muted)}
+.thinking{display:inline-flex;gap:4px}
+.thinking i{width:7px;height:7px;border-radius:4px;background:var(--plum-3);animation:blink 1.2s infinite}
+.thinking i:nth-child(2){animation-delay:.2s}.thinking i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.composer{flex-shrink:0;padding:10px 16px 18px;background:var(--cream);border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.sugs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+.sugs::-webkit-scrollbar{display:none}
+.sug{flex-shrink:0;min-height:36px;padding:0 12px;border-radius:18px;border:1px solid #CFC3D6;background:var(--card);color:var(--plum-2);font-size:13px;font-weight:600}
+.inrow{display:flex;gap:8px}
+.inrow input{flex:1;min-width:0;min-height:48px;padding:0 16px;border-radius:24px;border:1px solid #CFC3D6;background:var(--card)}
+.send{width:48px;height:48px;border-radius:24px;border:none;background:var(--plum);color:#fff;display:grid;place-items:center;flex-shrink:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* call */
+.call{background:var(--night);color:#fff}
+.call .back{color:var(--peach)}
+.call-top{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.avatar{width:64px;height:64px;border-radius:32px;background:var(--plum-2);display:grid;place-items:center;color:var(--peach)}
+.wave{display:flex;gap:3px;align-items:center;height:26px}
+.wave i{width:3px;border-radius:2px;background:var(--peach);height:6px}
+.wave.live i{animation:wv 1s ease-in-out infinite}
+.wave i:nth-child(2n){animation-delay:.15s}.wave i:nth-child(3n){animation-delay:.3s}.wave i:nth-child(5n){animation-delay:.45s}
+@keyframes wv{50%{height:24px}}
+.line{max-width:86%;padding:10px 13px;border-radius:16px;font-size:14px;line-height:1.4;animation:pop .35s ease-out}
+.line.coordinator{align-self:flex-end;background:var(--plum-2);border-bottom-right-radius:4px}
+.line.front_desk{align-self:flex-start;background:#35243F;border-bottom-left-radius:4px}
+.line small{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:3px}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}}
+.result{background:var(--cream);color:var(--ink);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:6px;animation:pop .4s ease-out}
+
+/* results */
+.lab{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.lab .v{font-weight:700;font-size:16px;text-align:right}
+
+/* plans */
+.plan{padding:16px;display:flex;flex-direction:column;gap:8px}
+.plan.rec{border:2px solid var(--plum-2)}
+.big{font-family:var(--serif);font-size:26px;font-weight:600}
+
+/* wrapped */
+.wr{color:#fff;cursor:pointer;user-select:none;-webkit-user-select:none}
+.wr-bars{position:absolute;left:16px;right:64px;top:18px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;z-index:3}
+.wr-bars i{height:4px;border-radius:2px;background:rgba(255,255,255,.3);overflow:hidden}
+.wr-bars i b{display:block;height:100%;width:0;background:currentColor}
+.wr-bars i.done b{width:100%}
+.wr-bars i.run b{animation:fill 6s linear forwards}
+@keyframes fill{to{width:100%}}
+.wr-close{position:absolute;top:6px;right:10px;z-index:4;width:44px;height:44px;border:none;background:none;color:inherit;display:grid;place-items:center}
+.wr-slide{position:absolute;inset:0;padding:84px 24px 40px;display:flex;flex-direction:column;gap:22px;overflow:hidden}
+.blob{position:absolute;border-radius:50%;pointer-events:none}
+.bignum{font-family:var(--serif);font-weight:700;line-height:.95}
+.wr-foot{position:absolute;left:24px;right:24px;bottom:28px;display:flex;gap:10px;z-index:3}
+.wr-next{position:absolute;right:24px;bottom:32px;width:60px;height:60px;border-radius:30px;border:none;display:grid;place-items:center;z-index:3}
+.hint{position:absolute;left:24px;bottom:50px;font-size:13px;opacity:.75}
+.bar-row{display:flex;flex-direction:column;gap:6px}
+.bar-row .top{display:flex;justify-content:space-between;font-size:15px;gap:10px}
+.bar-row .tr{height:14px;border-radius:7px;background:#3A2548;overflow:hidden}
+.bar-row .tr i{display:block;height:14px;border-radius:7px;width:0;transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+.grade{width:42px;text-align:center;font-weight:700;font-size:15px;padding:3px 0;border-radius:8px}
+.enter > *{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+.enter > *:nth-child(2){animation-delay:.12s}.enter > *:nth-child(3){animation-delay:.24s}.enter > *:nth-child(4){animation-delay:.36s}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}}
+
+/* toast + wake */
+.toast{position:absolute;left:16px;right:16px;bottom:100px;background:var(--ink);color:#fff;border-radius:14px;padding:12px 14px;font-size:14px;font-weight:600;display:flex;gap:10px;align-items:center;transform:translateY(20px);opacity:0;transition:.3s;pointer-events:none;z-index:20}
+.toast.show{transform:none;opacity:1}
+.wake{position:absolute;inset:0;z-index:30;background:var(--plum);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px;text-align:center}
+.wake p{margin:0;color:#E7DDEB;line-height:1.5}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+@media (max-width: 820px){
+  .stage{flex-direction:column;gap:24px;padding:0 0 32px}
+  .phone{width:100%;max-width:none;height:100dvh;min-height:560px;border-radius:0;box-shadow:none}
+  .panel{width:auto;padding:0 16px;max-width:480px}
+}
 </style>
 </head>
 <body>
-  <main>
-    <h1>Care Coordinator</h1>
-    <p>The app is on its way. This placeholder gets replaced by the real UI in <code>frontend/index.html</code>.</p>
-  </main>
+<div class="stage">
+  <div class="phone" id="phone">
+    <div id="app"></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="wake" id="wake" hidden>
+      <span class="mini-spin" style="width:28px;height:28px;color:var(--peach)"></span>
+      <b style="font-family:var(--serif);font-size:22px">Waking up the server…</b>
+      <p>The demo runs on free hosting that naps when idle. This takes up to a minute, once.</p>
+    </div>
+  </div>
+
+  <aside class="panel" aria-label="Demo guide">
+    <div class="brand">
+      <div class="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z"/></svg></div>
+      <h1>Care Coordinator</h1>
+    </div>
+    <p>An AI care coordinator that reads your visit notes, handles the next steps, and tells you what care will cost on your own plan.</p>
+    <h2>Demo path</h2>
+    <nav class="jumps" id="jumps"></nav>
+    <button class="linkbtn" id="reset">Reset demo</button>
+    <p class="fine">Enter your own insurance, or use the sample card. The medical record (visit notes, labs, doctors) is sample data. Please don't enter a real member ID; it isn't needed.</p>
+  </aside>
+</div>
+<input type="file" id="file" accept=".pdf,.txt,image/*" class="sr" tabindex="-1" aria-hidden="true">
+
+<script>
+(() => {
+/* ---------- config ---------- */
+const API = (() => {
+  const q = new URLSearchParams(location.search).get('api');
+  if (q) return q.replace(/\/$/, '');
+  if (['localhost', '127.0.0.1'].includes(location.hostname) || location.protocol === 'file:') return 'http://localhost:8000';
+  return 'https://care-coordinator-api.onrender.com';
+})();
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} },
+};
+const newId = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now());
+let SID = store.get('ccSid') || newId();
+store.set('ccSid', SID);
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => n == null ? '' : '$' + Number(n).toLocaleString('en-US', {maximumFractionDigits: Number(n) % 1 ? 2 : 0});
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep = ms => new Promise(r => setTimeout(r, reduced ? Math.min(ms, 150) : ms));
+let timers = [];
+const later = (fn, ms) => { const t = setTimeout(fn, reduced ? Math.min(ms, 150) : ms); timers.push(t); return t; };
+const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+
+async function api(path, {method = 'GET', body, form} = {}) {
+  const headers = {'X-Session-Id': SID};
+  let payload;
+  if (form) payload = form;
+  else if (body !== undefined) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
+  const res = await fetch(API + path, {method, headers, body: payload});
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail ? (typeof data.detail === 'string' ? data.detail : 'Please check the form.') : `Server error (${res.status})`);
+  return data;
+}
+
+function toast(msg) {
+  const t = $('#toast');
+  t.innerHTML = ic('check', 18, 2.4) + '<span>' + esc(msg) + '</span>';
+  t.classList.add('show');
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// **bold** and "- " bullets, the format the backend's chat replies use.
+function mdlite(t) {
+  const lines = esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').split('\n');
+  let out = '', inList = false;
+  for (const l of lines) {
+    const m = l.match(/^\s*[-•]\s+(.*)/);
+    if (m) { if (!inList) { out += '<ul>'; inList = true; } out += '<li>' + m[1] + '</li>'; }
+    else { if (inList) { out += '</ul>'; inList = false; } out += l.trim() ? '<div>' + l + '</div>' : '<div style="height:6px"></div>'; }
+  }
+  return out + (inList ? '</ul>' : '');
+}
+
+/* ---------- icons ---------- */
+const I = {
+  home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  care:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3h6v3H9zM9 11h6M9 15h4"/>',
+  shield:'<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+  spark:'<path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/>',
+  chat:'<path d="M4 5h16v11H9l-5 4z"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>', next:'<path d="M9 5l7 7-7 7"/>',
+  check:'<path d="M5 12l5 5 9-10"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  up:'<path d="M12 19V5M5 12l7-7 7 7"/>',
+  upload:'<path d="M12 16V4M7 9l5-5 5 5M5 20h14"/>',
+  doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h4"/>',
+  card:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 11h5M7 14h3"/>',
+  warn:'<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',
+  phone:'<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',
+  pill:'<rect x="3" y="9" width="18" height="7" rx="3.5" transform="rotate(-35 12 12.5)"/><path d="M9.5 8.5l5 7"/>',
+  hosp:'<path d="M4 21V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v16M9 21v-4h6v4M12 8v5M9.5 10.5h5"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>', arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>',
+  share:'<path d="M12 15V3M7 8l5-5 5 5M5 13v7h14v-7"/>', play:'<path d="M8 5v14l11-7z"/>',
+  flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/><path d="M7.5 15h9"/>',
+  sign:'<path d="M3 17l6-6 4 4 8-8"/><path d="M3 21h18"/>',
+  msg:'<path d="M4 4h16v12H5.2L4 17.2z"/>',
+  scale:'<path d="M12 3v18M5 7h14M5 7l-3 7a3.5 3.5 0 0 0 6 0zM19 7l-3 7a3.5 3.5 0 0 0 6 0z"/>',
+};
+const ic = (n, s = 20, w = 1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
+
+/* ---------- app state ---------- */
+const S = {screen: null, params: {}, pending: 0, busy: false};
+const app = $('#app');
+
+const tabs = (on, pending) => {
+  const t = (id, icn, label, extra = '') => `<button class="tab ${on === id ? 'on' : ''}" data-go="${id}" ${on === id ? 'aria-current="page"' : ''}>${extra}${ic(icn, 24)}${label}</button>`;
+  const badge = pending ? `<span class="badge" aria-label="${pending} needs your OK">${pending}</span>` : '';
+  return `<nav class="tabs" aria-label="Main">${t('today','home','Today')}${t('visit','care','Care', badge)}${t('coverage','shield','Coverage')}${t('recap','spark','Recap')}</nav>`;
+};
+const back = (to, label, extra = '') => `<button class="back" data-go="${to}" ${extra}>${ic('back', 18, 2)} ${esc(label)}</button>`;
+const stepper = n => `<div class="stepper"><div class="bar">${[1,2,3,4].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</div><span>Step ${n} of 4</span></div>`;
+
+/* ---------- screens: each has optional load(params) and view(data, params) ---------- */
+const screens = {};
+
+screens.welcome = {view: () => `<div class="screen ob"><div class="scroll">
+  <div class="brand"><div class="brand-mark" style="background:var(--peach);color:var(--plum)">${ic('spark', 20, 2)}</div><span style="font-family:var(--serif);font-size:22px;font-weight:700">Your care coordinator</span></div>
+  <h2 class="h1" style="font-size:38px">Hand off the busywork of getting care.</h2>
+  <p>After every visit, I read the doctor's notes, take care of the next steps and tell you what things will cost on your plan.</p>
+  <div class="stack" style="gap:14px;margin-top:6px">
+    ${[['care','Follows up after every visit','Books labs and specialists, tracks refills, chases approvals'],['shield','Explains your coverage','What a visit or scan will cost you, before you go'],['spark','Recaps your year','Money kept, time saved, care you kept up with']].map(f => `<div class="row" style="align-items:flex-start"><div class="conn-ic">${ic(f[0])}</div><div><div style="font-weight:700">${f[1]}</div><div class="muted" style="font-size:13px;margin-top:2px">${f[2]}</div></div></div>`).join('')}
+  </div>
+  <div style="flex:1"></div>
+  <div class="stack" style="gap:8px">
+    <button class="btn peach" data-go="signup">Create an account</button>
+    <button class="btn ghost" style="color:#fff;border-color:rgba(255,255,255,.3)" data-act="skip-onboarding">Skip to the demo (sample plan)</button>
+  </div>
+</div></div>`};
+
+screens.signup = {
+  load: () => api('/api/insurance').catch(() => null),
+  view: () => `<div class="screen ob"><div class="scroll">
+  ${back('welcome', 'Back')}
+  ${stepper(1)}
+  <h2 class="h1">Create your account</h2>
+  <form id="signup" class="stack" style="gap:14px">
+    <div class="fld"><label for="f-name">Full legal name</label><input id="f-name" required autocomplete="name" placeholder="As it appears on your insurance card"></div>
+    <div class="fld"><label for="f-dob">Date of birth</label><input id="f-dob" type="date" required></div>
+    <div class="fld"><label for="f-email">Email</label><input id="f-email" type="email" required autocomplete="email" placeholder="you@example.com"></div>
+    <div class="fld"><label for="f-phone">Mobile number</label><input id="f-phone" type="tel" autocomplete="tel" placeholder="Optional"><span class="fld-help">I'll text you when something needs your OK.</span></div>
+    <p style="font-size:13px;color:#CDB6E0">Your name and date of birth need to match your insurance card. That's how your plan and doctors confirm it's you.</p>
+    <label class="row" style="align-items:flex-start;gap:10px;font-size:13px;line-height:1.45;color:#E7DDEB"><input type="checkbox" required style="width:20px;height:20px;margin:0;flex-shrink:0;accent-color:var(--peach)"><span>I agree to the Terms and Privacy Policy. My health data is never sold or used for ads, and nothing is shared without my OK.</span></label>
+    <button class="btn peach" type="submit">Create account</button>
+  </form>
+</div></div>`};
+
+screens.insurance = {
+  load: () => api('/api/plans'),
+  view: d => `<div class="screen ob"><div class="scroll">
+  ${back('signup', 'Back')}
+  ${stepper(2)}
+  <h2 class="h1">Which health plan are you on?</h2>
+  <p>Your plan is the starting point: it decides what everything costs you. Anything you skip, I'll estimate for your plan type and mark as an estimate.</p>
+  <form id="ins" class="stack" style="gap:14px">
+    <div class="fld"><label for="i-payer">Insurance company</label><input id="i-payer" list="payers" required autocomplete="off" placeholder="e.g. Aetna, Kaiser, Medicare"><datalist id="payers">${d.payers.map(p => `<option value="${esc(p)}">`).join('')}</datalist></div>
+    <div class="grid2">
+      <div class="fld"><label for="i-type">Plan type</label><select id="i-type">${d.planTypes.map(t => `<option>${esc(t)}</option>`).join('')}</select></div>
+      <div class="fld"><label for="i-src">Coverage from</label><select id="i-src"><option value="employer">Employer</option><option value="marketplace">Marketplace</option><option value="medicare">Medicare</option><option value="medicaid">Medicaid</option></select></div>
+    </div>
+    <div class="fld"><label for="i-plan">Plan name <span style="font-weight:500;color:#B9A6C6">(optional)</span></label><input id="i-plan" placeholder="e.g. Choice POS II"></div>
+    <div class="grid2">
+      <div class="fld"><label for="i-mid">Member ID</label><input id="i-mid" placeholder="Optional"></div>
+      <div class="fld"><label for="i-grp">Group #</label><input id="i-grp" placeholder="Optional"></div>
+    </div>
+    <span class="fld-help" style="margin-top:-6px">For the demo, you don't need a real member ID.</span>
+    <details class="more">
+      <summary>Know your numbers? Add them for exact costs ${ic('next', 16, 2)}</summary>
+      <div class="stack" style="gap:12px">
+        <div class="grid2">
+          ${[['deductible','Deductible'],['oopMax','Out-of-pocket max'],['deductibleMet','Deductible met so far'],['oopMet','Out-of-pocket spent so far'],['primaryCareCopay','Primary care copay'],['specialistCopay','Specialist copay'],['urgentCareCopay','Urgent care copay'],['physicalTherapyCopay','PT copay'],['emergencyCopay','ER copay'],['coinsurance','Coinsurance %']].map(([k, l]) => `<div class="fld"><label for="b-${k}">${l}</label><input id="b-${k}" data-benefit="${k}" inputmode="decimal" placeholder="${k === 'coinsurance' ? '20' : '$'}"></div>`).join('')}
+        </div>
+        <span class="fld-help">Your Summary of Benefits has all of these. You can also upload it later on the Coverage tab.</span>
+      </div>
+    </details>
+    <p id="ins-err" role="alert" style="color:var(--peach);font-weight:600" hidden></p>
+    <button class="btn peach" type="submit">Continue</button>
+  </form>
+  <div class="or"><i></i>or<i></i></div>
+  <button class="btn ghost" style="color:#fff;border-color:rgba(255,255,255,.3)" data-act="sample-card">${ic('card', 20, 2)} Use the sample card</button>
+</div></div>`};
+
+screens.auth = {
+  load: () => api('/api/connections'),
+  view: (d, p) => {
+    const a = d.sources[p.source];
+    return `<div class="screen" style="background:#E9E4EC"><div class="scroll" style="padding:24px 16px">
+    <div class="row" style="justify-content:space-between;font-size:12px;color:var(--muted)"><span class="row" style="gap:6px">${ic('lock', 14, 2)} Secure sign-in · ${esc(a.org)}</span><span class="pill p-plum">Simulated</span></div>
+    <section class="card" style="background:#fff;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 2px 10px rgba(30,15,41,.08)">
+      <div class="row"><span class="conn-ic" style="background:${esc(a.color)};color:#fff;font-weight:700">${esc(a.initials)}</span><div><div style="font-weight:700;font-size:17px">${esc(a.org)}</div><div class="muted" style="font-size:13px">Sign in to continue</div></div></div>
+      <div class="fld light"><label for="a-user">Username</label><input id="a-user" value="demo-member" autocomplete="off"></div>
+      <div class="fld light"><label for="a-pw">Password</label><input id="a-pw" type="password" value="demo-password" autocomplete="off"></div>
+      <div class="stack" style="border-top:1px solid var(--line-2);padding-top:14px">
+        <div style="font-weight:700">Care Coordinator wants read-only access to:</div>
+        ${a.scopes.map(x => `<div class="row" style="gap:10px;font-size:14px"><span style="color:${esc(a.color)};flex-shrink:0">${ic('check', 16, 2.4)}</span>${esc(x)}</div>`).join('')}
+        <p class="fine">${esc(a.via)} You can disconnect anytime.</p>
+      </div>
+      <div class="stack" style="gap:8px">
+        <button class="btn" data-act="allow" data-source="${esc(p.source)}" style="background:${esc(a.color)}">Sign in and allow</button>
+        <button class="btn ghost" data-go="${p.source === 'plan' ? 'insurance' : 'found'}">Cancel</button>
+      </div>
+    </section>
+  </div></div>`;
+  }};
+
+screens.found = {
+  load: async () => ({c: await api('/api/connections'), ins: await api('/api/insurance')}),
+  view: ({c, ins}) => {
+    const i = ins.insurance;
+    const conn = f => `<div class="conn" style="${f.linkable ? '' : 'opacity:.8'}"><div class="conn-ic">${ic(f.kind === 'pharmacy' ? 'pill' : f.kind === 'imaging' ? 'doc' : 'hosp')}</div>
+      <div class="grow"><div style="font-weight:700">${esc(f.name)}</div><div class="muted" style="font-size:13px;margin-top:2px">${esc(f.detail)}</div><div style="font-size:12px;color:#B9A6C6;margin-top:2px">${esc(f.what)}</div></div>
+      ${f.linkable ? (f.linked ? `<span class="ok-txt">${ic('check', 16, 2.4)} Linked</span>` : `<button class="btn peach sm" data-act="link" data-source="${esc(f.id)}">Link</button>`) : ''}</div>`;
+    return `<div class="screen ob"><div class="scroll">
+    ${stepper(3)}
+    <div class="ok-txt" style="white-space:normal">${ic('check', 16, 2.4)} ${esc(i.planName)} linked${i.memberId ? ' · Member ' + esc(i.memberId) : ''}</div>
+    <h2 class="h1">I found your doctors and pharmacy</h2>
+    <p>From your last 12 months of claims. Link your patient portal so I can read visit notes and results.</p>
+    <div class="stack">${c.foundFromClaims.map(conn).join('')}</div>
+    <section class="conn" style="flex-direction:column;align-items:stretch;gap:10px;background:rgba(244,184,163,.1);border-color:rgba(244,184,163,.35)">
+      <div class="row" style="align-items:flex-start"><div class="conn-ic">${ic('sign')}</div><div class="grow"><div style="font-weight:700">Let me act on your behalf</div><div class="muted" style="font-size:13px;margin-top:2px;line-height:1.45">A HIPAA authorization so I can call your doctors' offices to schedule, talk to your plan about approvals and claims, and dispute billing errors. Revoke anytime.</div></div></div>
+      ${c.authorizedRep ? `<span class="ok-txt">${ic('check', 16, 2.4)} Signed</span>` : `<button class="btn peach sm" data-act="consent">Review and sign</button>`}
+    </section>
+    <div style="flex:1"></div>
+    <button class="btn peach" data-go="reading" ${c.readyToFinish ? '' : 'disabled'}>${c.readyToFinish ? 'Finish setup' : 'Link your portal and sign to continue'}</button>
+  </div></div>`;
+  }};
+
+screens.reading = {view: () => `<div class="screen ob"><div class="scroll" style="justify-content:center;gap:22px">
+  <div class="eyebrow" style="color:var(--peach)">New visit found</div>
+  <h2 class="h1">Reading your Sep 22 physical with Dr. Nair</h2>
+  <div class="stack" style="gap:16px">
+    ${['Pulled the after-visit notes from your portal','Found 4 next steps','Checked what your plan covers and requires','Booked 2, sent 1 to your pharmacy. One needs your OK.'].map(t => `<div class="read-line"><span class="tick done" style="width:26px;height:26px;background:var(--clay)">${ic('check', 14, 2.6)}</span><span>${t}</span></div>`).join('')}
+  </div>
+</div></div>`,
+  after: () => {
+    const ls = app.querySelectorAll('.read-line');
+    ls.forEach((l, i) => later(() => l.classList.add('on'), 500 + i * 800));
+    later(() => { store.set('ccOnboarded', '1'); go('today'); }, 500 + ls.length * 800 + 900);
+  }};
+
+screens.today = {
+  load: () => api('/api/today'),
+  view: d => {
+    const c = d.coordinator;
+    const tone = {ok: 'p-ok', info: 'p-info', warn: 'p-warn'};
+    const initial = (d.greeting.split(', ')[1] || 'M')[0];
+    return `<div class="screen"><div class="scroll">
+    <header class="row" style="justify-content:space-between;align-items:flex-start">
+      <div class="stack" style="gap:4px"><div class="eyebrow">${esc(d.dateLabel)}</div><h2 class="h1">${esc(d.greeting)}</h2></div>
+      <div aria-hidden="true" style="width:44px;height:44px;border-radius:22px;background:var(--lav-2);color:var(--plum-2);display:grid;place-items:center;font-weight:700;flex-shrink:0">${esc(initial)}</div>
+    </header>
+    <section class="agent" aria-label="Coordinator summary">
+      <div class="kick">${ic('spark', 16)} Your care coordinator · ${esc(c.since)}</div>
+      <div class="say">${esc(c.message)}</div>
+      <div class="bars" aria-label="${c.stepsDone} of ${c.stepsTotal} steps done">${Array.from({length: c.stepsTotal}, (_, i) => `<i class="${i < c.stepsDone ? 'on' : ''}"></i>`).join('')}</div>
+      <div class="row" style="gap:10px">
+        ${c.pendingApprovals ? `<button class="btn peach grow" style="font-size:15px;min-height:44px" data-go="approve">Review ${c.pendingApprovals} approval</button>` : ''}
+        <button class="btn line ${c.pendingApprovals ? '' : 'grow'}" data-go="visit">Visit summary</button>
+      </div>
+    </section>
+    ${d.newResults ? `<button class="card item" style="border-radius:18px" data-go="results"><div class="docic" style="background:var(--ok-bg);color:var(--ok)">${ic('flask', 18)}</div><div class="grow"><div class="item-t">${esc(d.newResults.title)}</div><div class="item-s">${esc(d.newResults.detail)}</div></div><span style="color:var(--plum-2)">${ic('next', 18, 2)}</span></button>` : ''}
+    <section class="stack" aria-labelledby="up">
+      <h3 class="h2" id="up">Coming up</h3>
+      <div class="card list">${d.upcoming.map(u => `<div class="item"><div class="date"><span>${esc(u.dow)}</span><b>${esc(u.day)}</b></div><div class="grow"><div class="item-t">${esc(u.title)}</div><div class="item-s">${esc(u.detail)}</div></div><span class="pill ${tone[u.tone] || 'p-plum'}" style="align-self:center">${esc(u.status)}</span></div>`).join('')}</div>
+    </section>
+    <div class="row" style="gap:8px;flex-wrap:wrap">${d.synced.map(x => `<span class="chip"><span class="dot"></span>${esc(x.name)}${x.detail ? ' · ' + esc(x.detail) : ''}</span>`).join('')}</div>
+    <button class="ask" data-go="chat">${ic('chat')} Ask what something will cost…</button>
+  </div>${tabs('today', c.pendingApprovals)}</div>`;
+  }};
+
+const STATUS = {booked: ['Booked', 'p-ok'], ordered: ['Ordered', 'p-info'], resulted: ['Results in', 'p-ok'],
+                needs_approval: ['Needs your OK', 'p-warn'], in_progress: ['In progress', 'p-plum']};
+const VIA = {phone_call: ['phone', 'Handled by phone call'], pharmacy: ['pill', 'Sent to your pharmacy'], portal_message: ['msg', 'Through your portal messages']};
+
+screens.visit = {
+  load: () => api('/api/visits/latest'),
+  view: d => {
+    const step = st => {
+      const [label, cls] = STATUS[st.status] || [st.status, 'p-plum'];
+      const needs = st.status === 'needs_approval';
+      const tick = needs ? '<div class="tick todo" aria-hidden="true"></div>' : st.status === 'in_progress' ? '<div class="tick busy" aria-hidden="true"></div>' : `<div class="tick done" aria-hidden="true">${ic('check', 16, 2.4)}</div>`;
+      const via = VIA[st.channel];
+      const extra = st.callId ? `<button class="link-mini" data-go="call">${ic('play', 14, 2)} Hear how I booked it</button>`
+                  : st.id === 'labs' && st.status === 'resulted' ? `<button class="link-mini" data-go="results">${ic('flask', 14, 2)} See your results</button>` : '';
+      const inner = `${tick}<div class="grow"><div class="row" style="justify-content:space-between;gap:8px;align-items:flex-start"><span class="item-t">${esc(st.title)}</span><span class="pill ${cls}">${esc(st.badge && st.status !== 'resulted' ? st.badge : label)}</span></div>
+        <div class="item-s">${esc(st.detail)}</div>${via && !needs ? `<div class="via">${ic(via[0], 13, 2)} ${via[1]}</div>` : ''}${extra}</div>`;
+      return st.id === 'pt' ? `<button class="step ${needs ? 'needs' : ''}" data-go="approve">${inner}${needs ? `<span style="align-self:center;color:var(--warn)">${ic('next', 18, 2)}</span>` : ''}</button>` : `<div class="step">${inner}</div>`;
+    };
+    const pending = d.steps.some(s => s.status === 'needs_approval') ? 1 : 0;
+    return `<div class="screen"><div class="scroll" style="padding-top:18px">
+    ${back('today', 'Today')}
+    <header class="stack" style="gap:4px"><h2 class="h1" style="font-size:28px">${esc(d.title)}</h2><div class="muted" style="font-size:14px">${esc(d.provider)}</div></header>
+    <section class="card pad stack" style="gap:8px">
+      <h3 class="label">In plain English</h3>
+      <p style="margin:0;line-height:1.45">${esc(d.summary)}</p>
+      <p class="fine" style="margin:0">${esc(d.disclaimer)}</p>
+    </section>
+    <section class="stack">
+      <h3 class="h2">Next steps · ${d.stepsDone} of ${d.steps.length} handled</h3>
+      <div class="card list">${d.steps.map(step).join('')}</div>
+    </section>
+  </div>${tabs('visit', pending)}</div>`;
+  }};
+
+screens.approve = {
+  load: () => api('/api/visits/latest/pt'),
+  view: d => {
+    if (d.stage > 0) {
+      const done = d.stage >= 5;
+      return `<div class="screen"><div class="scroll" style="padding-top:18px">
+      ${back('visit', 'Visit summary')}
+      <header class="stack" style="gap:8px"><span class="pill ${done ? 'p-ok' : 'p-plum'}">${done ? 'Done' : 'Working on it'}</span>
+        <h2 class="h1" style="font-size:26px">${done ? 'Physical therapy is approved and booked' : 'Getting your physical therapy approved'}</h2></header>
+      <section class="card pad">${d.timeline.map(s => `<div class="tl-i ${s.state !== 'waiting' ? 'on' : ''}"><div class="tick ${s.state}" aria-hidden="true">${s.state === 'done' ? ic('check', 14, 2.6) : ''}</div><div class="grow"><div class="item-t">${esc(s.title)}</div><div class="item-s">${esc(s.detail)}</div></div></div>`).join('')}</section>
+      <p class="fine" style="margin:0">${esc(d.timingNote)}</p>
+      ${done ? `<section class="card pad row" style="justify-content:space-between;align-items:baseline"><span class="item-t">You pay per visit</span><span class="big num">${money(d.cost.perVisit)}</span></section><button class="btn" data-go="today">Back to Today</button>` : ''}
+    </div>${tabs('visit', 0)}</div>`;
+    }
+    return `<div class="screen"><div class="scroll" style="padding-top:18px">
+    ${back('visit', 'Visit summary')}
+    <header class="stack" style="gap:8px"><span class="pill p-warn">Needs your OK</span><h2 class="h1" style="font-size:26px">Request approval for physical therapy</h2></header>
+    <section class="card pad stack" style="gap:12px">
+      <h3 class="label">What I'll do</h3>
+      <ol style="margin:0;padding:0;list-style:none" class="stack">${d.plan.map((t, i) => `<li class="row" style="gap:10px;font-size:14px;line-height:1.4;align-items:flex-start"><span style="width:24px;height:24px;flex-shrink:0;border-radius:12px;background:var(--lav);color:var(--plum-2);font-weight:700;font-size:13px;display:grid;place-items:center">${i + 1}</span>${esc(t)}</li>`).join('')}</ol>
+    </section>
+    <section class="card pad stack">
+      <h3 class="label">What it costs you</h3>
+      <div class="row" style="justify-content:space-between;align-items:baseline"><span class="big num" style="font-size:30px">${money(d.cost.perVisit)}<span style="font-family:var(--sans);font-size:15px;font-weight:500" class="muted"> / visit</span></span><span class="muted" style="font-size:14px">up to ${d.cost.visits} visits · est. ${money(d.cost.estimatedTotal)}</span></div>
+      <div class="muted" style="font-size:13px">${d.cost.breakdown.map(b => esc(b.label)).join(' · ')}. Counts toward your out-of-pocket max: ${money(d.cost.oopLeft)} left this year.</div>
+    </section>
+    <div class="note"><span style="color:var(--plum-2);flex-shrink:0">${ic('lock', 18)}</span><span>${esc(d.privacy)}</span></div>
+    <label class="row card" style="min-height:48px;padding:0 14px;border-radius:14px;font-size:14px"><input type="checkbox" id="auto" style="width:20px;height:20px;accent-color:var(--plum-2);margin:0">Auto-approve routine refills and reminders from now on</label>
+    <div class="stack" style="gap:8px">
+      <button class="btn" data-act="approve" style="min-height:52px">Approve and send</button>
+      <button class="btn ghost" data-go="visit">Not now</button>
+    </div>
+  </div></div>`;
+  },
+  after: d => { if (d.stage > 0 && d.stage < 5) later(() => refresh('approve'), 1500); }};
+
+screens.call = {
+  load: () => api('/api/calls/derm'),
+  view: d => `<div class="screen call"><div class="scroll" id="callScroll" style="padding-top:18px">
+  ${back('visit', 'Visit summary')}
+  <div class="call-top"><div class="avatar">${ic('phone', 28)}</div><div style="font-weight:700;font-size:17px">${esc(d.with)}</div>
+    <div class="row" style="gap:10px;font-size:13px;color:#CDB6E0"><span id="callState">Calling…</span><span class="wave live" id="wave">${'<i></i>'.repeat(14)}</span><span class="num" id="callTime">0:00</span></div></div>
+  <div class="stack" id="lines"></div>
+  <div id="callEnd"></div>
+</div></div>`,
+  after: d => {
+    const box = $('#lines'), sc = $('#callScroll');
+    let sec = 0, ended = false;
+    const tick = () => { if (ended || S.screen !== 'call') return; sec++; const el = $('#callTime'); if (el) el.textContent = Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); later(tick, 1000); };
+    later(() => { $('#callState').textContent = 'On the call'; tick(); }, 1200);
+    d.lines.forEach((l, i) => later(() => {
+      box.insertAdjacentHTML('beforeend', `<div class="line ${esc(l.speaker)}"><small>${l.speaker === 'coordinator' ? 'Coordinator (AI)' : 'Front desk'}</small>${esc(l.text)}</div>`);
+      sc.scrollTo({top: sc.scrollHeight, behavior: reduced ? 'auto' : 'smooth'});
+    }, 1600 + i * 2300));
+    later(() => {
+      ended = true;
+      $('#callState').textContent = 'Call ended'; $('#wave').classList.remove('live');
+      $('#callEnd').innerHTML = `<div class="result"><span class="pill p-ok">Booked</span><div class="big" style="font-size:22px">${esc(d.result.title)}</div><div class="muted" style="font-size:14px;line-height:1.4">${esc(d.result.detail)}</div><div class="row" style="gap:8px;margin-top:6px"><button class="btn grow" style="min-height:44px;font-size:15px" data-go="visit">Done</button><button class="btn ghost sm" data-go="call">Replay</button></div></div>`;
+      sc.scrollTo({top: sc.scrollHeight, behavior: reduced ? 'auto' : 'smooth'});
+    }, 1600 + d.lines.length * 2300 + 600);
+  }};
+
+screens.results = {
+  load: () => api('/api/results'),
+  view: d => {
+    if (d.status !== 'final') return `<div class="screen"><div class="scroll" style="padding-top:18px">
+      ${back('visit', 'Visit summary')}
+      <h2 class="h1" style="font-size:28px">Lab results</h2>
+      <section class="card pad stack"><span class="pill p-plum">Pending</span><p style="margin:0;line-height:1.45">${esc(d.detail)}</p></section>
+      <button class="btn" data-act="results-in">${ic('arrow', 18, 2)} Demo: skip ahead to Tuesday</button>
+      <p class="fine">In the real app, I check your portal and tell you the moment results post.</p>
+    </div>${tabs('visit', 0)}</div>`;
+    const flag = f => f === 'Normal' ? 'p-ok' : 'p-warn';
+    return `<div class="screen"><div class="scroll" style="padding-top:18px">
+    ${back('visit', 'Visit summary')}
+    <header class="stack" style="gap:4px"><h2 class="h1" style="font-size:28px">${esc(d.title)}</h2><div class="muted" style="font-size:14px">${esc(d.collected)} · released ${esc(d.released)}</div></header>
+    <section class="card pad stack" style="gap:8px"><h3 class="label">In plain English</h3><p style="margin:0;line-height:1.45">${esc(d.explanation)}</p></section>
+    <section class="card pad stack" style="gap:6px;background:var(--lav);border-color:var(--lav-2)"><h3 class="label">Dr. Nair's note</h3><p style="margin:0;line-height:1.45">${esc(d.doctorComment)}</p></section>
+    <section class="card list">${d.results.map(r => `<div class="lab"><div class="grow"><div class="item-t">${esc(r.name)}</div><div class="item-s">Normal ${esc(r.range)}${r.previous ? ` · was ${esc(r.previous.value)} in ${esc(r.previous.date.slice(0, 4))}` : ''}</div></div><div class="stack" style="gap:4px;align-items:flex-end"><span class="v num">${esc(r.value)} <span class="muted" style="font-size:12px;font-weight:500">${esc(r.unit)}</span></span><span class="pill ${flag(r.flag)}">${esc(r.flag)}</span></div></div>`).join('')}</section>
+    <p class="fine" style="margin:0">${esc(d.disclaimer)}</p>
+    <div class="stack" style="gap:8px">${d.nextActions.map((a, i) => `<button class="btn ${i ? 'ghost' : ''}" data-act="lab-action" data-label="${esc(a.label)}">${esc(a.label)}</button>`).join('')}</div>
+  </div>${tabs('visit', 0)}</div>`;
+  }};
+
+screens.coverage = {
+  load: async () => {
+    const [c, e] = await Promise.all([api('/api/coverage'), api('/api/enrollment/2027').catch(() => null)]);
+    return {c, e};
+  },
+  view: ({c, e}) => {
+    const sample = c.source === 'sample';
+    const est = c.estimatedFields.length;
+    const dataRows = sample
+      ? [['Benefits and costs', 'Deductible, out-of-pocket max, copays · synced today'], ['Claims and EOBs', '14 this year · updated as they process'], ['Negotiated prices', `What ${c.payer} pays each provider`], ['Insurance card', 'From your scan at sign-up']]
+      : [['Benefits and costs', est ? `${est} numbers estimated for a typical ${c.planType}` : 'From your plan documents'], ['Insurance card', 'From what you entered at sign-up'], ['Prices', 'Typical in-network rates (estimates)']];
+    return `<div class="screen"><div class="scroll">
+    <header class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
+      <div class="stack" style="gap:4px"><h2 class="h1">Coverage</h2><div class="muted" style="font-size:14px">${esc(c.plan)} · 2026 · ${esc(c.coverage)}</div></div>
+      <button class="btn sm" style="border-radius:22px;min-height:44px" data-go="chat">${ic('chat', 16, 2)} Ask</button>
+    </header>
+    <section class="card pad stack" style="gap:14px" aria-label="Benefit usage">
+      ${c.meters.map(m => `<div class="meter"><div class="top"><span style="font-weight:600">${esc(m.label)}${m.estimated ? '<span class="est">Estimate</span>' : ''}</span><span class="num" style="color:var(--muted-2)">${esc(m.text)}</span></div><div class="track"><i style="width:${m.total ? Math.min(100, 100 * m.used / m.total) : 0}%;background:${m.label === 'FSA' ? 'var(--clay)' : 'var(--plum-2)'}"></i></div></div>`).join('')}
+      <div class="fine">As of Sep 25 · ${sample ? 'from ' + esc(c.payer) : 'from what you entered'} · resets Jan 1</div>
+    </section>
+    ${c.alerts.map(a => `<section class="warnbox"><span style="color:var(--warn);flex-shrink:0">${ic('warn', 22)}</span><div class="stack" style="gap:4px"><div style="font-weight:700">${esc(a.title)}</div><div style="font-size:13px;line-height:1.4;color:var(--muted-2)">${esc(a.detail)}</div></div></section>`).join('')}
+    ${e && e.window ? `<button class="card item" style="border-radius:18px;align-items:flex-start" data-go="enroll"><div class="docic">${ic('scale', 18)}</div><div class="grow"><div class="item-t">Your 2027 plan options</div><div class="item-s">${esc(e.headline)}</div></div><span style="color:var(--plum-2);align-self:center">${ic('next', 18, 2)}</span></button>` : ''}
+    <section class="stack">
+      <h3 class="h2">Your plan data</h3>
+      <div class="card list">${dataRows.map(r => `<div class="item"><div class="docic">${ic('doc', 18)}</div><div class="grow"><div class="item-t" style="font-size:14px">${esc(r[0])}</div><div class="item-s" style="font-size:12px">${esc(r[1])}</div></div></div>`).join('')}
+        ${c.documents.filter(d => d.new).map(d => `<div class="item"><div class="docic">${ic(d.icon === 'card' ? 'card' : 'doc', 18)}</div><div class="grow"><div class="item-t" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.name)}</div><div class="item-s" style="font-size:12px">${esc(d.meta)}</div></div><span class="pill p-ok" style="align-self:center">New</span></div>`).join('')}</div>
+      ${sample ? `<p class="fine" style="margin:0">Nothing to upload. ${esc(c.payer)} shares this directly, read-only.</p>`
+        : `<button class="upload" data-act="upload" data-kind="plan">${ic('upload', 18, 2)} Upload your Summary of Benefits</button><p class="fine" style="margin:0">PDF or text. I'll read your exact deductible and copays from it and replace the estimates.</p>`}
+    </section>
+  </div>${tabs('coverage', 0)}</div>`;
+  }};
+
+screens.enroll = {
+  load: () => api('/api/enrollment/2027'),
+  view: d => `<div class="screen"><div class="scroll" style="padding-top:18px">
+  ${back('coverage', 'Coverage')}
+  <header class="stack" style="gap:4px"><h2 class="h1" style="font-size:28px">Your 2027 plan options</h2><div class="muted" style="font-size:14px">${esc(d.window || '')}</div></header>
+  <section class="agent"><div class="kick">${ic('spark', 16)} Based on your care this year</div><div class="say" style="font-size:19px">${esc(d.headline)}</div></section>
+  ${(d.options || []).map(o => `<section class="card plan ${o.planId === d.recommended ? 'rec' : ''}">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:8px"><div><div class="item-t">${esc(o.name)}</div><div class="item-s">${esc(o.type)} · deductible ${money(o.deductible)} · out-of-pocket max ${money(o.oopMax)}</div></div>
+      ${o.current ? '<span class="pill p-plum">Current</span>' : o.planId === d.recommended ? '<span class="pill p-ok">Best fit</span>' : ''}</div>
+    <div class="row" style="justify-content:space-between;align-items:baseline"><span class="big num">${money(o.total)}<span class="muted" style="font-family:var(--sans);font-size:14px;font-weight:500"> / year</span></span>${o.current ? '' : `<span class="num" style="font-weight:700;color:${o.vsCurrent < 0 ? 'var(--ok)' : 'var(--warn)'}">${o.vsCurrent < 0 ? 'saves ' + money(-o.vsCurrent) : '+' + money(o.vsCurrent)}</span>`}</div>
+    <div class="item-s">Premium ${money(o.premium)} + your costs ${money(o.outOfPocket)}${o.employerHsa ? ` − employer HSA ${money(o.employerHsa)}` : ''} · worst case ${money(o.worstCase)}</div>
+    ${o.outOfNetworkForYou.length ? `<div class="note" style="color:var(--warn)">${ic('warn', 16)} <span>Out of network for you: ${esc(o.outOfNetworkForYou.join(', '))}</span></div>` : ''}
+  </section>`).join('')}
+  ${d.caveat ? `<p class="fine" style="margin:0">${esc(d.caveat)}</p>` : ''}
+</div>${tabs('coverage', 0)}</div>`};
+
+screens.chat = {
+  load: () => api('/api/chat'),
+  view: d => `<div class="screen">
+  <div class="chat-head"><button class="iconbtn" data-go="coverage" aria-label="Back to Coverage">${ic('back', 20, 2)}</button>
+    <div class="grow"><div style="font-weight:700;font-size:17px">Ask about costs</div><div class="muted" style="font-size:12px">Answers from your plan · math from your benefits</div></div></div>
+  <div class="msgs" id="msgs" aria-live="polite">
+    ${d.messages.length ? '' : `<div class="ai"><div>Ask me what care will cost on your plan. I'll show the math: price, what's left on your deductible, and your copay or coinsurance.</div><div class="src">I don't give medical advice. Clinical questions go to your doctor.</div></div>`}
+    ${d.messages.map(m => m.role === 'user' ? `<div class="me">${esc(m.text)}</div>` : `<div class="ai">${mdlite(m.text)}</div>`).join('')}
+  </div>
+  <form class="composer" id="ask">
+    <div class="sugs">${d.suggestions.map(s => `<button type="button" class="sug" data-sug="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+    <div class="inrow"><label for="q" class="sr">Ask a question</label><input id="q" autocomplete="off" placeholder="Ask about a cost or benefit…" maxlength="500"><button class="send" type="submit" aria-label="Send">${ic('up', 20, 2)}</button></div>
+  </form></div>`,
+  after: () => { const m = $('#msgs'); m.scrollTop = m.scrollHeight; }};
+
+/* Year in Care: 4 story cards */
+screens.recap = {
+  load: () => api('/api/recap'),
+  view: (d, p) => {
+    const i = p.i || 0;
+    const fg = ['#fff', '#2E1540', '#fff', '#fff'][i];
+    const bg = ['#2E1540', '#F4B8A3', '#1E0F29', '#2E1540'][i];
+    const max = Math.max(...d.money.breakdown.map(b => b.amount));
+    const slides = [
+      `<div class="blob" style="width:420px;height:420px;background:#C9603F;right:-170px;top:90px"></div>
+       <div class="blob" style="width:220px;height:220px;background:#F7D98B;right:40px;top:300px"></div>
+       <div class="blob" style="width:120px;height:120px;border:3px solid #CDB6E0;left:-30px;top:240px"></div>
+       <div style="flex:1"></div>
+       <div class="enter stack" style="position:relative;gap:18px;margin-bottom:70px">
+         <div style="font-size:14px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#F4B8A3">Your ${esc(d.year)}</div>
+         <div style="font-family:var(--serif);font-size:48px;font-weight:700;line-height:1.02">${esc(d.intro.title)}</div>
+         <div style="font-size:17px;line-height:1.45;color:#E7DDEB">${esc(d.intro.subtitle)}</div>
+       </div>`,
+      `<div class="blob" style="width:300px;height:300px;background:#F7D98B;left:-140px;bottom:-110px"></div>
+       <div class="enter stack" style="position:relative;gap:26px">
+         <div style="font-family:var(--serif);font-size:34px;font-weight:700;line-height:1.1">Your year, by the numbers</div>
+         <div><div class="bignum num" style="font-size:96px" data-count="${d.numbers.appointmentsKept}">0</div><div style="font-size:18px;font-weight:600">appointments, all kept</div></div>
+         <div><div class="bignum num" style="font-size:72px"><span data-count="${d.numbers.refillsOnTime}">0</span> of ${d.numbers.refillsTotal}</div><div style="font-size:18px;font-weight:600">refills picked up on time</div></div>
+         <div><div class="bignum num" style="font-size:72px"><span data-count="${d.numbers.hoursSaved}">0</span> hrs</div><div style="font-size:18px;font-weight:600;line-height:1.35">of calls, forms and hold music I handled so you didn't have to</div></div>
+       </div>`,
+      `<div class="enter stack" style="position:relative;gap:20px">
+         <div style="font-size:14px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#F7D98B">Money you kept</div>
+         <div style="font-family:var(--serif);font-size:44px;font-weight:700;line-height:1.05">You kept <span style="color:#F7D98B" class="num">$<span data-count="${d.money.total}" data-comma>0</span></span> in your pocket.</div>
+         <div class="stack" style="gap:16px">${d.money.breakdown.map((b, k) => `<div class="bar-row"><div class="top"><span>${esc(b.label)}</span><b class="num">${money(b.amount)}</b></div><div class="tr"><i data-w="${Math.round(100 * b.amount / max)}" style="background:${['#F7D98B', '#F4B8A3', '#FFFFFF', '#CDB6E0'][k % 4]}"></i></div></div>`).join('')}</div>
+         <div style="font-size:16px;line-height:1.45;color:#E7DDEB">${esc(d.money.biggestWin)}</div>
+       </div>`,
+      `<div class="enter stack" style="position:relative;gap:16px;margin-top:-14px">
+         <section style="background:#FAF5EE;color:#1F1B2E;border-radius:24px;padding:20px" class="stack">
+           <div class="row" style="gap:16px">
+             <div style="position:relative;width:100px;height:100px;flex-shrink:0">
+               <svg width="100" height="100" viewBox="0 0 104 104" aria-hidden="true"><circle cx="52" cy="52" r="44" fill="none" stroke="#EFE8DD" stroke-width="10"/><circle id="ring" cx="52" cy="52" r="44" fill="none" stroke="#C9603F" stroke-width="10" stroke-linecap="round" stroke-dasharray="0 277" transform="rotate(-90 52 52)" style="transition:stroke-dasharray 1.4s cubic-bezier(.2,.8,.2,1)"/></svg>
+               <div class="num" style="position:absolute;inset:0;display:grid;place-items:center;font-family:var(--serif);font-size:34px;font-weight:700" data-count="${d.scorecard.score}">0</div>
+             </div>
+             <div class="stack" style="gap:4px"><div style="font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8A3E26">${esc(d.year)} scorecard</div><div style="font-family:var(--serif);font-size:26px;font-weight:700;line-height:1.1">Care score: ${esc(d.scorecard.score)}</div><div style="font-size:13px;color:#4A4458">Up ${esc(d.scorecard.change)} from ${d.year - 1}</div></div>
+           </div>
+           <div>${d.scorecard.rows.map(r => { const good = r.grade.startsWith('A'); return `<div class="row" style="padding:10px 0;border-top:1px solid #E7DFD3"><span class="grow" style="font-weight:600">${esc(r.label)}</span><span class="num" style="font-size:14px;color:#4A4458">${esc(r.value)}</span><span class="grade" style="background:${good ? '#E3F0E6' : '#E4ECF7'};color:${good ? '#1F5A32' : '#1E4C8A'}">${esc(r.grade)}</span></div>`; }).join('')}</div>
+         </section>
+         <section style="border:1px solid #6E4D80;border-radius:20px;padding:16px" class="stack" >
+           <div style="font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#F4B8A3">Head start on ${d.year + 1}</div>
+           <div style="font-size:15px;line-height:1.45;color:#F1ECF4">${esc(d.nextYear)}</div>
+         </section>
+       </div>`,
+    ];
+    const nextStyle = [['#fff', '#2E1540'], ['#2E1540', '#fff'], ['#F7D98B', '#1E0F29']][i] || [];
+    return `<div class="screen wr" style="background:${bg};color:${fg}" data-act="wrtap" aria-roledescription="story" aria-label="Year in Care, card ${i + 1} of 4">
+      <div class="wr-bars" aria-hidden="true">${slides.map((_, k) => `<i class="${k < i ? 'done' : k === i ? 'run' : ''}"><b></b></i>`).join('')}</div>
+      <button class="wr-close" data-go="today" aria-label="Close recap">${ic('x', 22, 2)}</button>
+      <div class="wr-slide">${slides[i]}</div>
+      ${i < 3 ? `<button class="wr-next" data-act="wrnext" aria-label="Next card" style="background:${nextStyle[0]};color:${nextStyle[1]}">${ic('arrow', 24, 2)}</button><div class="hint" aria-hidden="true">Tap to continue</div>`
+        : `<div class="wr-foot"><button class="btn peach grow" style="min-height:56px;border-radius:28px" data-act="share" data-text="${esc(d.shareText)}">${ic('share', 18, 2)} Share my recap</button><button class="btn" style="min-height:56px;border-radius:28px;background:transparent;border:1px solid #8A6A9C;width:auto" data-go="today">Done</button></div>`}
+    </div>`;
+  },
+  after: (d, p) => {
+    app.querySelectorAll('[data-count]').forEach(el => {
+      const to = +el.dataset.count, comma = el.hasAttribute('data-comma'), t0 = performance.now(), dur = reduced ? 1 : 1200;
+      const step = now => { const k = Math.min(1, (now - t0) / dur), v = Math.round(to * (1 - Math.pow(1 - k, 3))); el.textContent = comma ? v.toLocaleString('en-US') : v; if (k < 1 && S.screen === 'recap') requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    });
+    later(() => { app.querySelectorAll('[data-w]').forEach(b => b.style.width = b.dataset.w + '%'); const r = $('#ring'); if (r) r.setAttribute('stroke-dasharray', (277 * d.scorecard.score / 100).toFixed(0) + ' 277'); }, 300);
+    if ((p.i || 0) < 3) later(() => showRecap((p.i || 0) + 1), 6000);
+  }};
+
+/* ---------- router ---------- */
+const cache = {};  // last loaded data per screen, for instant re-renders (recap cards, polling)
+async function go(name, params = {}, {quiet = false} = {}) {
+  clearTimers();
+  S.screen = name; S.params = params;
+  const sc = screens[name];
+  highlightJump(name);
+  if (!quiet && sc.load) app.innerHTML = `<div class="screen"><div class="center"><span class="mini-spin" style="color:var(--plum-3);width:24px;height:24px"></span></div></div>`;
+  let data = null;
+  try {
+    if (sc.load) data = await sc.load(params);
+  } catch (e) {
+    if (S.screen !== name) return;
+    app.innerHTML = `<div class="screen"><div class="center"><b style="color:var(--ink)">Couldn't reach the server</b><span>${esc(e.message)}</span><button class="btn sm" data-act="retry">Try again</button></div></div>`;
+    return;
+  }
+  if (S.screen !== name) return;
+  cache[name] = data;
+  app.innerHTML = sc.view(data, params);
+  app.querySelector('.scroll')?.scrollTo(0, 0);
+  sc.after?.(data, params);
+}
+const refresh = name => { if (S.screen === name) go(name, S.params, {quiet: true}); };
+function showRecap(i) { clearTimers(); S.params = {i}; app.innerHTML = screens.recap.view(cache.recap, S.params); screens.recap.after(cache.recap, S.params); }
+
+/* ---------- demo guide ---------- */
+const JUMPS = [
+  ['welcome', 'Sign up + your insurance', 'Type your plan or use the sample card'],
+  ['today', 'Today', '3 of 4 next steps done'],
+  ['visit', 'Visit summary', "Plain English from the doctor's notes"],
+  ['approve', 'Approve physical therapy', 'Prior authorization, tracked'],
+  ['call', 'Booking call replay', 'How the derm slot was booked'],
+  ['results', 'Lab results', 'Skip ahead to when they post'],
+  ['coverage', 'Coverage + bills', 'Your deductible, a caught billing error'],
+  ['chat', 'Ask about costs', 'Live answers, math from your plan'],
+  ['enroll', '2027 plan options', 'Priced against your care this year'],
+  ['recap', 'Year in Care', 'The year-end recap'],
+];
+const JUMP_MAP = {signup: 'welcome', insurance: 'welcome', auth: 'welcome', found: 'welcome', reading: 'welcome'};
+$('#jumps').innerHTML = JUMPS.map(([id, t, s], i) => `<button class="jump" data-jump="${id}"><span class="n">${i + 1}</span><span>${t}<small>${s}</small></span></button>`).join('');
+function highlightJump(name) {
+  const id = JUMP_MAP[name] || name;
+  document.querySelectorAll('.jump').forEach(b => b.classList.toggle('on', b.dataset.jump === id));
+}
+
+/* ---------- actions ---------- */
+async function withBusy(btn, fn) {
+  if (S.busy) return;
+  S.busy = true;
+  const label = btn?.innerHTML;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="mini-spin"></span>'; }
+  try { await fn(); }
+  catch (e) { toast(e.message || 'Something went wrong'); if (btn?.isConnected) { btn.disabled = false; btn.innerHTML = label; } }
+  finally { S.busy = false; }
+}
+
+let chatBusy = false;
+async function ask(q) {
+  q = (q || '').trim();
+  if (!q || chatBusy) return;
+  chatBusy = true;
+  const msgs = $('#msgs');
+  msgs.insertAdjacentHTML('beforeend', `<div class="me">${esc(q)}</div><div class="ai" id="pending"><span class="thinking" aria-label="Thinking"><i></i><i></i><i></i></span></div>`);
+  msgs.scrollTop = msgs.scrollHeight;
+  const bubble = $('#pending');
+  try {
+    const r = await api('/api/chat', {method: 'POST', body: {message: q}});
+    bubble.innerHTML = mdlite(r.reply) + (r.source === 'fallback' ? '<div class="src">Quick answer from your plan numbers (AI is busy).</div>' : '');
+  } catch (e) {
+    bubble.innerHTML = `<div>Sorry, I couldn't reach the server. Try again in a moment.</div>`;
+  }
+  bubble.removeAttribute('id');
+  if (msgs.isConnected) msgs.scrollTop = msgs.scrollHeight;
+  chatBusy = false;
+}
+
+function benefitsFromForm() {
+  const out = {};
+  document.querySelectorAll('[data-benefit]').forEach(inp => {
+    const v = inp.value.trim();
+    if (v) out[inp.dataset.benefit] = inp.dataset.benefit === 'coinsurance' ? Number(v.replace(/[^\d.]/g, '')) / 100 : v;
+  });
+  return out;
+}
+
+document.addEventListener('click', e => {
+  const j = e.target.closest('[data-jump]');
+  if (j) { go(j.dataset.jump, j.dataset.jump === 'recap' ? {i: 0} : {}); return; }
+  const g = e.target.closest('[data-go]');
+  if (g) { e.stopPropagation(); go(g.dataset.go, g.dataset.go === 'recap' ? {i: 0} : {}); return; }
+  const sug = e.target.closest('[data-sug]');
+  if (sug) { ask(sug.dataset.sug); return; }
+  const a = e.target.closest('[data-act]');
+  if (!a) return;
+  const act = a.dataset.act;
+  if (act === 'retry') go(S.screen, S.params);
+  else if (act === 'skip-onboarding') withBusy(a, async () => { await api('/api/card/scan', {method: 'POST'}); store.set('ccOnboarded', '1'); go('today'); });
+  else if (act === 'sample-card') withBusy(a, async () => { await api('/api/card/scan', {method: 'POST'}); toast('Sample card loaded'); go('auth', {source: 'plan'}); });
+  else if (act === 'link') go('auth', {source: a.dataset.source});
+  else if (act === 'allow') withBusy(a, async () => { const r = await api(`/api/connections/${a.dataset.source}`, {method: 'POST'}); toast(r.org + ' linked'); go('found'); });
+  else if (act === 'consent') withBusy(a, async () => { await api('/api/consent/authorized-rep', {method: 'POST'}); toast('Authorization signed'); go('found', {}, {quiet: true}); });
+  else if (act === 'approve') withBusy(a, async () => { await api('/api/visits/latest/pt/approve', {method: 'POST', body: {autoApprove: !!$('#auto')?.checked}}); toast("Sent to Dr. Nair's office"); go('approve', {}, {quiet: true}); });
+  else if (act === 'results-in') withBusy(a, async () => { await api('/api/demo/results-in', {method: 'POST'}); go('results', {}, {quiet: true}); });
+  else if (act === 'lab-action') toast(/remind/i.test(a.dataset.label) ? "I'll remind you in September 2027" : 'Demo: this opens a message to Dr. Nair in your portal');
+  else if (act === 'upload') { $('#file').dataset.kind = a.dataset.kind || 'doc'; $('#file').click(); }
+  else if (act === 'wrnext') { e.stopPropagation(); showRecap(Math.min(3, (S.params.i || 0) + 1)); }
+  else if (act === 'share') {
+    e.stopPropagation();
+    const t = a.dataset.text;
+    (navigator.share ? navigator.share({text: t}) : navigator.clipboard?.writeText(t) || Promise.reject()).then(() => toast('Recap ready to share'), () => toast('Recap ready to share'));
+  }
+  else if (act === 'wrtap') {
+    if (e.target.closest('button')) return;
+    const r = a.getBoundingClientRect(), left = (e.clientX - r.left) < r.width * .3;
+    showRecap(Math.max(0, Math.min(3, (S.params.i || 0) + (left ? -1 : 1))));
+  }
+});
+
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target, btn = f.querySelector('[type=submit]');
+  if (f.id === 'signup') withBusy(btn, async () => {
+    await api('/api/signup', {method: 'POST', body: {name: $('#f-name').value.trim(), dob: $('#f-dob').value, email: $('#f-email').value.trim(), phone: $('#f-phone').value.trim() || null}});
+    toast('Account created'); go('insurance');
+  });
+  else if (f.id === 'ins') withBusy(btn, async () => {
+    const r = await api('/api/insurance', {method: 'POST', body: {
+      payer: $('#i-payer').value.trim(), planType: $('#i-type').value, coverageSource: $('#i-src').value,
+      planName: $('#i-plan').value.trim() || null, memberId: $('#i-mid').value.trim() || null,
+      groupNumber: $('#i-grp').value.trim() || null, memberName: $('#f-name')?.value || null, benefits: benefitsFromForm()}});
+    const n = r.estimatedFields.length;
+    toast(n ? `Plan saved. ${n} numbers estimated for now` : 'Plan saved with your numbers');
+    go('auth', {source: 'plan'});
+  });
+  else if (f.id === 'ask') { const q = $('#q'); const v = q.value; q.value = ''; ask(v); }
+});
+
+$('#file').addEventListener('change', async e => {
+  const file = e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  const kind = e.target.dataset.kind;
+  toast('Reading ' + file.name + '…');
+  const form = new FormData(); form.append('file', file);
+  try {
+    const r = await api(kind === 'plan' ? '/api/insurance/document' : '/api/documents', {method: 'POST', form});
+    toast(r.message);
+  } catch (err) { toast(err.message); }
+  refresh('coverage');
+});
+
+$('#reset').addEventListener('click', async () => {
+  try { await api('/api/reset', {method: 'POST'}); } catch {}
+  SID = newId(); store.set('ccSid', SID); store.del('ccOnboarded');
+  go('welcome');
+});
+
+/* ---------- boot: wake the free-tier server, then start ---------- */
+(async () => {
+  const slow = setTimeout(() => { $('#wake').hidden = false; }, 2500);
+  for (let attempt = 0; attempt < 12; attempt++) {
+    try { const r = await fetch(API + '/api/health'); if (r.ok) break; } catch {}
+    await sleep(5000);
+  }
+  clearTimeout(slow);
+  $('#wake').hidden = true;
+  go(store.get('ccOnboarded') ? 'today' : 'welcome');
+})();
+})();
+</script>
 </body>
 </html>

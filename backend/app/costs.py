@@ -26,8 +26,8 @@ SERVICES = {
     "urgent_care": {"name": "Urgent care visit", "category": "urgent_care", "options": [("CityCare Urgent Care", "any", 220)]},
     "er_visit": {"name": "Emergency room visit", "category": "emergency", "options": [("St. Mary's Hospital ER", "st-marys", 2400)]},
     "generic_90day": {"name": "Generic drug, 90-day supply", "category": "generic_rx", "options": [
-        ("Preferred pharmacy (e.g. Elm St)", "preferred", 60), ("Mail order (preferred)", "preferred", 60),
-        ("Main St Drug (not preferred)", "non-preferred", 60)]},
+        ("Elm St Pharmacy (preferred)", "preferred", 60), ("Mail order (preferred)", "preferred", 60),
+        ("Non-preferred pharmacy", "non-preferred", 60)]},
 }
 CATEGORIES = ("preventive", "primary_care", "specialist", "physical_therapy", "lab", "imaging",
               "urgent_care", "emergency", "generic_rx")

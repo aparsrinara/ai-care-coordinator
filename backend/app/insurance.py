@@ -78,7 +78,7 @@ def sample() -> dict:
         "source": "sample",
         "payer": "Blue Ridge Health", "planName": "Blue Ridge PPO Silver (2026)", "planType": "PPO",
         "coverageSource": "employer", "memberName": "Maya Chen", "memberId": "BRX 482 190 337",
-        "groupNumber": "20418", "rxBin": "610014", "coverage": "Maya + Sam (spouse)",
+        "groupNumber": "20418", "rxBin": "610014", "coverage": "Individual",
         "premiumYear": 3480,
         "benefits": dict(TYPICAL["PPO"], deductibleMet=1120, oopMet=2340),
         "benefitSources": {k: "sample" for k in BENEFIT_FIELDS},
