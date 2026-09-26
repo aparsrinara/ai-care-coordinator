@@ -389,7 +389,7 @@ screens.insurance = {
   ${back('signup', 'Back')}
   ${stepper(2)}
   <h2 class="h1">Which health plan are you on?</h2>
-  <p>Your plan is the starting point: it decides what everything costs you. Anything you skip, I'll estimate for your plan type and mark as an estimate.</p>
+  <p>Your plan is the starting point: it decides what everything costs you. You can add your exact numbers later by uploading your Summary of Benefits on the Coverage tab.</p>
   <form id="ins" class="stack" style="gap:14px">
     <div class="fld"><label for="i-payer">Insurance company</label><input id="i-payer" list="payers" required autocomplete="off" placeholder="e.g. Aetna, Kaiser, Medicare"><datalist id="payers">${d.payers.map(p => `<option value="${esc(p)}">`).join('')}</datalist></div>
     <div class="grid2">
@@ -402,20 +402,9 @@ screens.insurance = {
       <div class="fld"><label for="i-grp">Group #</label><input id="i-grp" placeholder="Optional"></div>
     </div>
     <span class="fld-help" style="margin-top:-6px">For the demo, you don't need a real member ID.</span>
-    <details class="more">
-      <summary>Know your numbers? Add them for exact costs ${ic('next', 16, 2)}</summary>
-      <div class="stack" style="gap:12px">
-        <div class="grid2">
-          ${[['deductible','Deductible'],['oopMax','Out-of-pocket max'],['deductibleMet','Deductible met so far'],['oopMet','Out-of-pocket spent so far'],['primaryCareCopay','Primary care copay'],['specialistCopay','Specialist copay'],['urgentCareCopay','Urgent care copay'],['physicalTherapyCopay','PT copay'],['emergencyCopay','ER copay'],['coinsurance','Coinsurance %']].map(([k, l]) => `<div class="fld"><label for="b-${k}">${l}</label><input id="b-${k}" data-benefit="${k}" inputmode="decimal" placeholder="${k === 'coinsurance' ? '20' : '$'}"></div>`).join('')}
-        </div>
-        <span class="fld-help">Your Summary of Benefits has all of these. You can also upload it later on the Coverage tab.</span>
-      </div>
-    </details>
     <p id="ins-err" role="alert" style="color:var(--peach);font-weight:600" hidden></p>
     <button class="btn peach" type="submit">Continue</button>
   </form>
-  <div class="or"><i></i>or<i></i></div>
-  <button class="btn ghost" style="color:#fff;border-color:rgba(255,255,255,.3)" data-act="sample-card">${ic('card', 20, 2)} Use the sample card</button>
 </div></div>`};
 
 screens.auth = {
@@ -848,7 +837,6 @@ document.addEventListener('click', e => {
   if (!a) return;
   const act = a.dataset.act;
   if (act === 'retry') go(S.screen, S.params);
-  else if (act === 'sample-card') withBusy(a, async () => { await api('/api/card/scan', {method: 'POST'}); toast('Sample card loaded'); go('auth', {source: 'plan'}); });
   else if (act === 'link') go('auth', {source: a.dataset.source});
   else if (act === 'allow') withBusy(a, async () => { const r = await api(`/api/connections/${a.dataset.source}`, {method: 'POST'}); toast(r.org + ' linked'); go('found'); });
   else if (act === 'consent') withBusy(a, async () => { await api('/api/consent/authorized-rep', {method: 'POST'}); toast('Authorization signed'); go('found', {}, {quiet: true}); });
