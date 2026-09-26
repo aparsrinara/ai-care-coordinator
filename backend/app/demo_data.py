@@ -18,8 +18,8 @@ CONNECTIONS = {
     },
     "portal": {
         "org": "Northside Health", "initials": "NH", "color": "#1F5A32",
-        "scopes": ["Visit notes and after-visit summaries", "Medications and allergies",
-                   "Lab results", "Referrals and upcoming appointments"],
+        "scopes": ["Visit notes and after-visit summaries", "Lab results",
+                   "Prescriptions, and the pharmacy they're sent to", "Referrals and upcoming appointments"],
         "via": "Shared through Northside Health's patient access API (SMART on FHIR), the standard way health systems connect patient apps.",
         "standard": "SMART on FHIR (ONC certified API, USCDI)",
     },
@@ -28,9 +28,7 @@ CONNECTIONS = {
 # Doctors and pharmacies found in the last 12 months of claims (ExplanationOfBenefit).
 FOUND_FROM_CLAIMS = [
     {"id": "portal", "kind": "health_system", "name": "Northside Health", "detail": "6 visits · Dr. Priya Nair, primary care",
-     "what": "Patient portal: visit notes, labs, referrals", "linkable": True, "required": True},
-    {"id": "pharmacy", "kind": "pharmacy", "name": "Elm St Pharmacy", "detail": "4 prescription fills",
-     "what": "Tracked through your pharmacy claims. No login needed", "linkable": False},
+     "what": "Patient portal: visit notes, labs, prescriptions, referrals", "linkable": True, "required": True},
     {"id": "clearview", "kind": "imaging", "name": "Clearview Imaging", "detail": "1 visit · no portal to link",
      "what": "Tracked through your claims", "linkable": False},
 ]

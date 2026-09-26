@@ -132,7 +132,9 @@ MEDICATION_REQUEST = {
     "resourceType": "MedicationRequest", "id": "mr-atorva", "status": "active", "intent": "order",
     "medicationCodeableConcept": {"text": "Atorvastatin 10 mg tablet"},
     "dosageInstruction": [{"text": "1 tablet by mouth daily"}],
-    "dispenseRequest": {"quantity": {"value": 90, "unit": "tablets"}, "numberOfRepeatsAllowed": 3},
+    # The e-prescription names the patient's pharmacy of choice, so the portal tells us where it went.
+    "dispenseRequest": {"quantity": {"value": 90, "unit": "tablets"}, "numberOfRepeatsAllowed": 3,
+                        "performer": _ref("Organization", "elm-st")},
     "encounter": _ref("Encounter", ENCOUNTER["id"]),
 }
 
