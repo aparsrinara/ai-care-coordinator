@@ -11,9 +11,9 @@ DEMO_TODAY_LABEL = "Friday, Sep 25"
 CONNECTIONS = {
     "plan": {
         "org": "{payer}", "initials": "{payer_initials}", "color": "#1E4C8A",
-        "scopes": ["Your coverage, benefits and costs", "Claims and Explanations of Benefits",
+        "scopes": ["Your benefits: deductible, out-of-pocket max and copays", "Claims and Explanations of Benefits",
                    "Deductible and out-of-pocket totals", "Prior authorization status"],
-        "via": "Shared through {payer}'s patient access API (FHIR), using your {payer} member login.",
+        "via": "Shared directly by {payer}, read-only.",
         "standard": "CMS Patient Access API (CARIN Blue Button)",
     },
     "portal": {
@@ -112,11 +112,26 @@ RECAP = {
 }
 
 CHAT_SUGGESTIONS = [
-    "How much will a knee MRI cost me?",
-    "Where am I on my deductible?",
-    "Is urgent care covered?",
     "What will my PT cost?",
-    "Should I switch plans next year?",
+    "How do I get the most out of my benefits?",
+    "Is urgent care covered?",
+    "Where am I on my deductible?",
+    "Cheapest place for my refill?",
+]
+
+# Provider bills found in the member's email, each checked against the plan's EOB.
+BILLING_SENDERS = ["Northside Health", "Northside Lab", "Clearview Imaging", "{payer}"]
+DISPUTE_SECONDS = 3.5  # sped up for the demo; real corrections take 1-3 weeks
+BILLS = [
+    {"id": "lab", "provider": "Northside Lab", "what": "Aug 14 · Blood test", "billed": 370, "owed": 185,
+     "from": "From your email · Sep 18", "eob": "{payer} EOB · Sep 4",
+     "lines": [{"code": "80061", "name": "Lipid panel", "amount": 185}, {"code": "80061", "name": "Lipid panel", "amount": 185, "duplicate": True}],
+     "eobLines": [{"code": "80061", "name": "Lipid panel", "amount": 185}], "eobNote": "Price $185 · went toward your deductible",
+     "date": "Aug 14"},
+    {"id": "xray", "provider": "Clearview Imaging", "what": "Aug 30 · Knee X-ray", "billed": 62, "owed": 62,
+     "status": ["Checked · OK to pay", "ok"], "detail": "Matches your EOB · due Oct 15"},
+    {"id": "visit", "provider": "Northside Health", "what": "Sep 22 · Office visit", "billed": 25, "owed": None,
+     "status": ["Waiting on insurance", "info"], "detail": "Hold off paying until {payer} processes it"},
 ]
 
 # Used when Bedrock is unreachable, so the demo never dead-ends on stage.

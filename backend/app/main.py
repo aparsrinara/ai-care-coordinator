@@ -44,7 +44,9 @@ def _fresh() -> dict:
     return {
         "account": {"name": "Maya Chen", "dob": "1991-03-04", "email": "maya.chen@example.com", "phone": "(555) 014-2291"},
         "insurance": insurance.sample(),
-        "links": {"plan": False, "portal": False},
+        "links": {"plan": False, "portal": False, "email": False},
+        "emailProvider": None,
+        "disputeAt": None,
         "authorizedRep": False,
         "ptApprovedAt": None,
         "labsResulted": False,
@@ -79,6 +81,28 @@ def pt_stage(s: dict) -> int:
         return 0
     stage = 1 + int((time.time() - s["ptApprovedAt"]) / D.PT_STEP_SECONDS)
     return 5 if stage >= 4 else stage  # the 4th step (booking) finishing means booked
+
+
+def dispute_stage(s: dict) -> int:
+    """0 = issue found, 1 = disputing, 2 = fixed (corrected bill received)."""
+    if s["disputeAt"] is None:
+        return 0
+    return 2 if time.time() - s["disputeAt"] >= D.DISPUTE_SECONDS else 1
+
+
+def _bill_view(s: dict, bill: dict) -> dict:
+    b = _t(bill, s)
+    if bill["id"] == "lab":
+        stage = dispute_stage(s)
+        b["amount"] = 185 if stage == 2 else 370
+        b["status"] = [["Issue found", "warn"], ["Disputing", "plum"], ["Fixed · OK to pay", "ok"]][stage]
+        b["stage"] = stage
+        b["tappable"] = True
+        if stage == 2:
+            b["lines"] = b["lines"][:1]
+    else:
+        b["amount"] = bill["billed"]
+    return b
 
 
 def _money(n) -> str:
@@ -238,8 +262,9 @@ def signup(body: Signup, x_session_id: str | None = Header(None)):
 def plans(q: str = ""):
     """Suggestions for the plan search box. Any payer name is accepted by POST /api/insurance."""
     q = q.lower()
-    return {"payers": [p for p in insurance.PAYER_DIRECTORY if q in p.lower()], "planTypes": insurance.PLAN_TYPES,
-            "benefitFields": insurance.BENEFIT_FIELDS}
+    return {"payers": [dict(p, initials="".join(w[0] for w in p["name"].split()[:2]).upper())
+                       for p in insurance.PAYER_DIRECTORY if q in (p["name"] + p["subtitle"]).lower()],
+            "planTypes": insurance.PLAN_TYPES, "benefitFields": insurance.BENEFIT_FIELDS}
 
 
 class InsuranceIn(BaseModel):
@@ -292,7 +317,8 @@ def me(x_session_id: str | None = Header(None)):
         "insurance": {"payer": ins["payer"], "planName": ins["planName"], "planType": ins["planType"],
                       "memberId": ins["memberId"], "source": ins["source"],
                       "estimatedFields": [k for k, v in ins["benefitSources"].items() if v in ("typical", "assumed")]},
-        "connections": [{"name": _t(D.CONNECTIONS[k]["org"], s), "linked": v} for k, v in s["links"].items()],
+        "connections": [{"name": _t(D.CONNECTIONS[k]["org"], s) if k in D.CONNECTIONS else f"Email ({s['emailProvider'] or 'not linked'})",
+                         "linked": v} for k, v in s["links"].items()],
         "authorizedRep": s["authorizedRep"],
     }
 
@@ -322,13 +348,44 @@ def connections(x_session_id: str | None = Header(None)):
 
 
 @app.post("/api/connections/{source}")
-def link(source: str, x_session_id: str | None = Header(None)):
-    """Simulated OAuth sign-in. In production this is the SMART on FHIR authorization-code flow."""
+def link(source: str, body: dict | None = None, x_session_id: str | None = Header(None)):
+    """Simulated OAuth sign-in. In production this is the SMART on FHIR authorization-code flow.
+    `email` takes {"provider": "Gmail" | "Outlook" | "Other"}."""
+    if source == "email":
+        return link_email(EmailLink(**(body or {})), x_session_id)
     if source not in D.CONNECTIONS:
-        raise HTTPException(404, f"Unknown source '{source}'. Use: {', '.join(D.CONNECTIONS)}")
+        raise HTTPException(404, f"Unknown source '{source}'. Use: {', '.join(D.CONNECTIONS)}, email")
     s = session(x_session_id)
     s["links"][source] = True
     return {"linked": source, "org": _t(D.CONNECTIONS[source]["org"], s), "links": s["links"]}
+
+
+class EmailLink(BaseModel):
+    provider: str = "Gmail"  # Gmail, Outlook, Other
+
+
+@app.get("/api/connections/email")
+def email_info(x_session_id: str | None = Header(None)):
+    """What the email connection will and won't do, for the consent screen."""
+    s = session(x_session_id)
+    return {
+        "providers": ["Gmail", "Outlook", "Other"],
+        "senders": _t(D.BILLING_SENDERS, s),
+        "will": [f"Search only for emails from {', '.join(_t(D.BILLING_SENDERS, s)[:-1])} and {_t(D.BILLING_SENDERS, s)[-1]}",
+                 "Check each bill against what your insurance says you owe"],
+        "wont": ["Open, store or summarize any other email", "Send, delete or change anything in your inbox"],
+        "note": "Email providers give apps read access to your whole inbox, not just certain senders. "
+                "In production this is Gmail or Microsoft Graph read-only access, which requires the provider's security review.",
+        "linked": s["links"]["email"],
+    }
+
+
+def link_email(body: EmailLink | None = None, x_session_id: str | None = Header(None)):
+    """Simulated read-only email connection. Finds provider bills and checks them against EOBs."""
+    s = session(x_session_id)
+    s["links"]["email"] = True
+    s["emailProvider"] = (body.provider if body else "Gmail")
+    return {"linked": "email", "billsFound": len(D.BILLS), "message": f"Email linked. Found {len(D.BILLS)} bills, checking them now."}
 
 
 @app.post("/api/consent/authorized-rep")
@@ -479,13 +536,59 @@ def coverage(x_session_id: str | None = Header(None)):
         "memberId": ins["memberId"], "source": ins["source"],
         "estimatedFields": [k for k, v in src.items() if v in ("typical", "assumed")],
         "meters": meters,
-        "alerts": [{
-            "kind": "duplicate_charge", "title": "Caught a duplicate charge",
-            "detail": _t("Northside Lab billed $185 twice for your Aug 14 visit. I've opened a dispute with {payer}. No action needed.", s),
-            "evidence": [e["id"] for e in fhir_data.EXPLANATIONS_OF_BENEFIT],
-        }],
+        "emailLinked": s["links"]["email"],
+        "alerts": _coverage_alerts(s),
+        "bills": [_bill_view(s, b) for b in D.BILLS] if s["links"]["email"] else [],
+        "billingSenders": len(D.BILLING_SENDERS) + 1 if s["links"]["email"] else 0,
         "documents": [{k: v for k, v in d.items() if k != "text"} for d in s["docs"]],
     }
+
+
+def _coverage_alerts(s: dict) -> list[dict]:
+    if not s["links"]["email"]:
+        return []  # the duplicate shows up on the provider's bill, which we only see through email
+    stage = dispute_stage(s)
+    if stage == 2:
+        return [{"kind": "fixed", "tone": "ok", "billId": "lab", "title": "Fixed: you saved $185",
+                 "detail": "Northside Lab corrected your Aug 14 bill to $185, matching your insurance."}]
+    detail = ("Northside Lab's bill lists the same Aug 14 blood test twice ($370). Your insurance says you owe $185."
+              + (" I've asked for a corrected bill." if stage == 1 else " Tap to review."))
+    return [{"kind": "duplicate_charge", "tone": "warn", "billId": "lab", "title": "Caught a duplicate charge",
+             "detail": detail, "evidence": [e["id"] for e in fhir_data.EXPLANATIONS_OF_BENEFIT]}]
+
+
+@app.get("/api/bills/{bill_id}")
+def bill_detail(bill_id: str, x_session_id: str | None = Header(None)):
+    """A provider bill next to the plan's EOB for the same service."""
+    s = session(x_session_id)
+    bill = next((b for b in D.BILLS if b["id"] == bill_id), None)
+    if not bill:
+        raise HTTPException(404, "Bill not found")
+    v = _bill_view(s, bill)
+    if bill_id == "lab":
+        stage = v["stage"]
+        v["title"] = "Corrected bill: you owe $185" if stage == 2 else "Northside Lab billed the same test twice"
+        v["explanation"] = ("The billing office removed the duplicate line. The corrected bill matches your insurance, so it is safe to pay."
+                            if stage == 2 else
+                            "Same test code on the same day, listed twice. Your insurance processed one test, so you should owe $185, not $370.")
+        v["plan"] = "Send Northside Lab's billing office your EOB and ask for a corrected bill. I'll follow up every 5 days until it's fixed."
+        v["planNote"] = "Hold off paying for now. Billing offices usually pause the bill while they review it."
+        v["progress"] = [None,
+                         {"title": "Request sent to Northside Lab billing", "detail": "Your EOB is attached. Waiting for their corrected bill."},
+                         {"title": "Saved you $185", "detail": "Due Oct 20. I'll remind you a few days before."}][stage]
+        v["timingNote"] = "Demo timing is sped up. Real corrections usually take 1 to 3 weeks." if stage == 1 else None
+    return v
+
+
+@app.post("/api/bills/{bill_id}/dispute")
+def dispute(bill_id: str, x_session_id: str | None = Header(None)):
+    """Ask the provider's billing office for a corrected bill (uses the member's HIPAA authorization)."""
+    if bill_id != "lab":
+        raise HTTPException(400, "Nothing to dispute on this bill")
+    s = session(x_session_id)
+    if s["disputeAt"] is None:
+        s["disputeAt"] = time.time()
+    return bill_detail(bill_id, x_session_id)
 
 
 def _pdf_text(data: bytes) -> tuple[str, int]:
@@ -519,7 +622,7 @@ async def upload(file: UploadFile = File(...), x_session_id: str | None = Header
         text = data.decode("utf-8", "ignore")[:MAX_DOC_CHARS]
         meta = "Text · read"
     else:
-        meta = "Photo · saved"
+        meta = "Photo · checking against your EOBs"
     readable = len(text.strip()) > 40
     if text and not readable:
         meta = "Saved · looks scanned, could not read the text"
@@ -527,7 +630,8 @@ async def upload(file: UploadFile = File(...), x_session_id: str | None = Header
         s["docText"] = (s["docText"] + f"\n\n=== {name} ===\n{text}")[-MAX_DOC_CHARS:]
     doc = {"name": name, "meta": meta, "icon": "card" if ctype.startswith("image/") else "doc", "new": True}
     s["docs"].insert(0, doc)
-    message = "Read it. Ask me anything about this plan." if readable else "Saved to your documents"
+    message = ("Read it. Ask me anything about this plan." if readable else
+               "Got it. I'll check it against your insurance." if ctype.startswith("image/") else "Saved to your documents")
     return {"document": doc, "readable": readable, "message": message}
 
 

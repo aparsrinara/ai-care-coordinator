@@ -147,14 +147,15 @@ APPOINTMENTS = [
      "participant": [{"actor": _ref("Practitioner", "dr-lee")}]},
 ]
 
-# Aug 14 lab visit, billed twice: the "duplicate charge" the coverage screen flags.
+# Aug 14 lab visit: the plan processed ONE lipid panel. The lab's bill (from email) lists it twice,
+# which is the duplicate charge the coverage screen catches by comparing the two.
 EXPLANATIONS_OF_BENEFIT = [
-    {"resourceType": "ExplanationOfBenefit", "id": f"eob-{n}", "status": "active", "use": "claim",
+    {"resourceType": "ExplanationOfBenefit", "id": "eob-0814", "status": "active", "use": "claim",
      "patient": _ref("Patient", PATIENT_ID), "insurer": _ref("Organization", "blue-ridge"),
      "provider": {"display": "Northside Lab"}, "billablePeriod": {"start": "2026-08-14"},
-     "item": [{"productOrService": {"text": "Lab panel"}, "net": {"value": 185, "currency": "USD"}}],
+     "item": [{"productOrService": {"coding": [{"system": "http://www.ama-assn.org/go/cpt", "code": "80061"}],
+                                    "text": "Lipid panel"}, "net": {"value": 185, "currency": "USD"}}],
      "total": [{"category": {"text": "member liability"}, "amount": {"value": 185, "currency": "USD"}}]}
-    for n in ("0814-a", "0814-b")
 ]
 
 # Results of the Sep 28 fasting labs. They arrive when the demo "fast-forwards"

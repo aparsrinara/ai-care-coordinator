@@ -83,6 +83,23 @@ a{color:var(--plum-2)}
 .warnbox{background:var(--warn-soft);border:1px solid var(--warn-line);border-radius:18px;padding:14px 16px;display:flex;gap:12px}
 .center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;color:var(--muted);padding:24px}
 
+.list > button:first-child{border-top:0}
+.alert{display:flex;gap:12px;width:100%;text-align:left;background:var(--warn-soft);border:1px solid #F0D9B8;border-radius:18px;padding:14px 16px;color:var(--ink)}
+.alert.ok{background:var(--ok-bg);border-color:#C4DEC9}
+.cmp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.bl{display:flex;gap:8px;align-items:center;padding:8px;border-radius:10px;background:var(--cream)}
+.bl.dup{background:var(--warn-bg);outline:2px solid #E0A35C}
+.prov{min-height:44px;border-radius:12px;border:1px solid #CFC3D6;background:#fff;font-weight:700;color:var(--plum-2)}
+.prov.on{border:2px solid var(--plum-2);background:var(--lav)}
+.pick{display:flex;align-items:center;gap:12px;min-height:60px;padding:10px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;width:100%;text-align:left}
+.pick:hover{background:rgba(255,255,255,.1)}
+.logo{width:40px;height:40px;border-radius:10px;background:rgba(244,184,163,.16);color:var(--peach);display:grid;place-items:center;font-weight:700;font-size:14px;flex-shrink:0}
+.ai .big{font-family:var(--serif);font-size:20px;font-weight:600;line-height:1.25;margin-bottom:10px}
+.brk{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.brk div{display:flex;justify-content:space-between;gap:10px}
+.brk .tot{padding-top:6px;border-top:1px solid var(--line-2);font-weight:700}
+.ai .callout{margin-top:10px;font-size:13px;color:var(--warn);background:var(--warn-soft);border-radius:10px;padding:8px 10px}
+
 /* tabs */
 .tabs{flex-shrink:0;min-height:64px;padding:10px 0 max(10px, env(safe-area-inset-bottom,0px));background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:flex-start}
 .tab{width:76px;min-height:44px;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--muted);font-size:11px;font-weight:600;position:relative}
@@ -132,7 +149,7 @@ button.step{cursor:pointer}
 .ob .back{color:var(--peach)}
 .ob p{color:#E7DDEB;line-height:1.5;margin:0}
 .stepper{display:flex;gap:10px;align-items:center}
-.stepper .bar{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.stepper .bar{flex:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .stepper i{height:4px;border-radius:2px;background:rgba(255,255,255,.2)}
 .stepper i.on{background:var(--peach)}
 .stepper span{font-size:12px;font-weight:700;color:#CDB6E0;white-space:nowrap}
@@ -334,12 +351,13 @@ const I = {
   flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/><path d="M7.5 15h9"/>',
   sign:'<path d="M3 17l6-6 4 4 8-8"/><path d="M3 21h18"/>',
   msg:'<path d="M4 4h16v12H5.2L4 17.2z"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
   scale:'<path d="M12 3v18M5 7h14M5 7l-3 7a3.5 3.5 0 0 0 6 0zM19 7l-3 7a3.5 3.5 0 0 0 6 0z"/>',
 };
 const ic = (n, s = 20, w = 1.8) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${I[n]}</svg>`;
 
 /* ---------- app state ---------- */
-const S = {screen: null, params: {}, pending: 0, busy: false};
+const S = {screen: null, params: {}, pending: 0, busy: false, planq: '', emailProv: 'Gmail', emailBack: 'found'};
 const app = $('#app');
 
 const tabs = (on, pending) => {
@@ -348,7 +366,7 @@ const tabs = (on, pending) => {
   return `<nav class="tabs" aria-label="Main">${t('today','home','Today')}${t('visit','care','Care', badge)}${t('coverage','shield','Coverage')}${t('recap','spark','Recap')}</nav>`;
 };
 const back = (to, label, extra = '') => `<button class="back" data-go="${to}" ${extra}>${ic('back', 18, 2)} ${esc(label)}</button>`;
-const stepper = n => `<div class="stepper"><div class="bar">${[1,2,3,4].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</div><span>Step ${n} of 4</span></div>`;
+const stepper = n => `<div class="stepper"><div class="bar">${[1,2,3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</div><span>Step ${n} of 3</span></div>`;
 
 /* ---------- screens: each has optional load(params) and view(data, params) ---------- */
 const screens = {};
@@ -356,67 +374,78 @@ const screens = {};
 screens.welcome = {view: () => `<div class="screen ob"><div class="scroll">
   <div class="brand"><div class="brand-mark" style="background:var(--peach);color:var(--plum)">${ic('spark', 20, 2)}</div><span style="font-family:var(--serif);font-size:22px;font-weight:700">Your care coordinator</span></div>
   <h2 class="h1" style="font-size:38px">Hand off the busywork of getting care.</h2>
-  <p>After every visit, I read the doctor's notes, take care of the next steps and tell you what things will cost on your plan.</p>
+  <p>After every visit, I read the doctor's notes, take care of the next steps and tell you what things will cost.</p>
   <div class="stack" style="gap:14px;margin-top:6px">
-    ${[['care','Follows up after every visit','Books labs and specialists, tracks refills, chases approvals'],['shield','Explains your coverage','What a visit or scan will cost you, before you go'],['spark','Recaps your year','Money kept, time saved, care you kept up with']].map(f => `<div class="row" style="align-items:flex-start"><div class="conn-ic">${ic(f[0])}</div><div><div style="font-weight:700">${f[1]}</div><div class="muted" style="font-size:13px;margin-top:2px">${f[2]}</div></div></div>`).join('')}
+    ${[['care','Follows up after every visit','Books labs and specialists, tracks prescriptions, chases approvals'],['shield','Explains your coverage','What a visit or drug will cost you, before you go'],['spark','Recaps your year','Money kept, time saved, care you kept up with']].map(f => `<div class="row" style="align-items:flex-start"><div class="conn-ic">${ic(f[0])}</div><div><div style="font-weight:700">${f[1]}</div><div class="muted" style="font-size:13px;margin-top:2px">${f[2]}</div></div></div>`).join('')}
   </div>
   <div style="flex:1"></div>
-  <div class="stack" style="gap:8px">
-    <button class="btn peach" data-go="signup">Create an account</button>
-  </div>
+  <button class="btn peach" data-go="signup">Create an account</button>
 </div></div>`};
 
-screens.signup = {
-  load: () => api('/api/insurance').catch(() => null),
-  view: () => `<div class="screen ob"><div class="scroll">
+screens.signup = {view: () => `<div class="screen ob"><div class="scroll">
   ${back('welcome', 'Back')}
   ${stepper(1)}
   <h2 class="h1">Create your account</h2>
   <form id="signup" class="stack" style="gap:14px">
-    <div class="fld"><label for="f-name">Full legal name</label><input id="f-name" required autocomplete="name" placeholder="As it appears on your insurance card"></div>
+    <div class="fld"><label for="f-name">Full legal name</label><input id="f-name" required autocomplete="name"></div>
     <div class="fld"><label for="f-dob">Date of birth</label><input id="f-dob" type="date" required></div>
-    <div class="fld"><label for="f-email">Email</label><input id="f-email" type="email" required autocomplete="email" placeholder="you@example.com"></div>
-    <div class="fld"><label for="f-phone">Mobile number</label><input id="f-phone" type="tel" autocomplete="tel" placeholder="Optional"><span class="fld-help">I'll text you when something needs your OK.</span></div>
+    <div class="fld"><label for="f-email">Email</label><input id="f-email" type="email" required autocomplete="email"></div>
+    <div class="fld"><label for="f-phone">Mobile number</label><input id="f-phone" type="tel" autocomplete="tel"><span class="fld-help">I'll text you when something needs your OK.</span></div>
+    <div class="fld"><label for="f-pw">Password</label><input id="f-pw" type="password" required autocomplete="new-password" minlength="8"></div>
     <p style="font-size:13px;color:#CDB6E0">Your name and date of birth need to match your insurance card. That's how your plan and doctors confirm it's you.</p>
     <label class="row" style="align-items:flex-start;gap:10px;font-size:13px;line-height:1.45;color:#E7DDEB"><input type="checkbox" required style="width:20px;height:20px;margin:0;flex-shrink:0;accent-color:var(--peach)"><span>I agree to the Terms and Privacy Policy. My health data is never sold or used for ads, and nothing is shared without my OK.</span></label>
-    <button class="btn peach" type="submit">Create account</button>
+    <button class="btn peach" type="submit" style="margin-top:4px">Create account</button>
   </form>
 </div></div>`};
 
-screens.insurance = {
+screens.authorize = {
+  load: () => api('/api/me'),
+  view: (d) => `<div class="screen ob"><div class="scroll">
+  ${back('signup', 'Back')}
+  ${stepper(1)}
+  <h2 class="h1">Let me act on your behalf</h2>
+  <p>Insurers and billing offices only talk to someone you've authorized in writing. This lets me:</p>
+  <div class="stack" style="gap:12px">
+    ${['Talk to your health plan about your claims, prior authorizations and appeals','Request records and itemized bills from your providers','Schedule appointments and request prescription renewals'].map(x => `<div class="row" style="gap:10px;align-items:flex-start;line-height:1.4"><span style="color:#9FD8B0;flex-shrink:0;margin-top:1px">${ic('check', 18, 2.4)}</span>${x}</div>`).join('')}
+  </div>
+  <div class="conn" style="flex-direction:column;align-items:stretch;gap:6px;font-size:13px;line-height:1.45;color:#E7DDEB">
+    <div>You approve anything that costs money or shares your records. You can revoke this anytime in Settings.</div>
+    <div style="color:#CDB6E0">Some plans need their own authorized representative form for appeals. When one does, I'll fill it in and send it to you to sign.</div>
+  </div>
+  <form id="authz" class="stack" style="gap:12px">
+    <div class="fld"><label for="f-sig">Type your full name to sign</label><input id="f-sig" required value="${esc(d.account.name)}" style="font-family:var(--serif);font-size:18px;font-style:italic"><span class="fld-help">Signed electronically · Sep 25, 2026</span></div>
+    <button class="btn peach" type="submit">Sign and continue</button>
+  </form>
+</div></div>`};
+
+const planRows = (list, q) => {
+  const typed = q.trim();
+  const exact = list.some(p => p.name.toLowerCase() === typed.toLowerCase());
+  const rows = list.map(p => `<button class="pick" data-plan="${esc(p.name)}"><span class="logo">${esc(p.initials)}</span><span class="grow"><span style="display:block;font-weight:700">${esc(p.name)}</span><span style="display:block;font-size:13px;color:#CDB6E0">${esc(p.subtitle)}</span></span>${ic('next', 18, 2)}</button>`);
+  if (typed.length > 1 && !exact) rows.push(`<button class="pick" data-plan="${esc(typed)}"><span class="logo">${ic('shield', 18)}</span><span class="grow"><span style="display:block;font-weight:700">Use “${esc(typed)}”</span><span style="display:block;font-size:13px;color:#CDB6E0">Not listed? I'll connect to it by name</span></span>${ic('next', 18, 2)}</button>`);
+  return rows.join('') || `<p style="margin:8px 0;color:#CDB6E0">Type your health plan's name.</p>`;
+};
+screens.plan = {
   load: () => api('/api/plans'),
   view: d => `<div class="screen ob"><div class="scroll">
-  ${back('signup', 'Back')}
+  ${back('authorize', 'Back')}
   ${stepper(2)}
   <h2 class="h1">Which health plan are you on?</h2>
-  <p>Your plan is the starting point: it decides what everything costs you. You can add your exact numbers later by uploading your Summary of Benefits on the Coverage tab.</p>
-  <form id="ins" class="stack" style="gap:14px">
-    <div class="fld"><label for="i-payer">Insurance company</label><input id="i-payer" list="payers" required autocomplete="off" placeholder="e.g. Aetna, Kaiser, Medicare"><datalist id="payers">${d.payers.map(p => `<option value="${esc(p)}">`).join('')}</datalist></div>
-    <div class="grid2">
-      <div class="fld"><label for="i-type">Plan type</label><select id="i-type">${d.planTypes.map(t => `<option>${esc(t)}</option>`).join('')}</select></div>
-      <div class="fld"><label for="i-src">Coverage from</label><select id="i-src"><option value="employer">Employer</option><option value="marketplace">Marketplace</option><option value="medicare">Medicare</option><option value="medicaid">Medicaid</option></select></div>
-    </div>
-    <div class="fld"><label for="i-plan">Plan name <span style="font-weight:500;color:#B9A6C6">(optional)</span></label><input id="i-plan" placeholder="e.g. Choice POS II"></div>
-    <div class="grid2">
-      <div class="fld"><label for="i-mid">Member ID</label><input id="i-mid" placeholder="Optional"></div>
-      <div class="fld"><label for="i-grp">Group #</label><input id="i-grp" placeholder="Optional"></div>
-    </div>
-    <span class="fld-help" style="margin-top:-6px">For the demo, you don't need a real member ID.</span>
-    <p id="ins-err" role="alert" style="color:var(--peach);font-weight:600" hidden></p>
-    <button class="btn peach" type="submit">Continue</button>
-  </form>
+  <p>Your plan is the starting point. Its claims show which doctors and pharmacies you use, so I can find them for you.</p>
+  <div class="fld"><label for="planq" class="sr">Search health plans</label><input id="planq" placeholder="Search your health plan" autocomplete="off" value="${esc(S.planq)}"></div>
+  <div id="planList" class="stack" style="gap:8px">${planRows(d.payers.filter(p => (p.name + p.subtitle).toLowerCase().includes(S.planq.toLowerCase())), S.planq)}</div>
 </div></div>`};
 
 screens.auth = {
   load: () => api('/api/connections'),
   view: (d, p) => {
     const a = d.sources[p.source];
-    return `<div class="screen" style="background:#E9E4EC"><div class="scroll" style="padding:calc(24px + env(safe-area-inset-top,0px)) 16px 24px">
+    return `<div class="screen" style="background:#E9E4EC"><div class="scroll" style="padding:calc(18px + env(safe-area-inset-top,0px)) 16px 24px">
     <div class="row" style="justify-content:space-between;font-size:12px;color:var(--muted)"><span class="row" style="gap:6px">${ic('lock', 14, 2)} Secure sign-in · ${esc(a.org)}</span><span class="pill p-plum">Simulated</span></div>
     <section class="card" style="background:#fff;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 2px 10px rgba(30,15,41,.08)">
-      <div class="row"><span class="conn-ic" style="background:${esc(a.color)};color:#fff;font-weight:700">${esc(a.initials)}</span><div><div style="font-weight:700;font-size:17px">${esc(a.org)}</div><div class="muted" style="font-size:13px">Sign in to continue</div></div></div>
-      <div class="fld light"><label for="a-user">Username</label><input id="a-user" value="demo-member" autocomplete="off"></div>
-      <div class="fld light"><label for="a-pw">Password</label><input id="a-pw" type="password" value="demo-password" autocomplete="off"></div>
+      <div class="row"><span class="logo" style="background:${esc(a.color)};color:#fff">${esc(a.initials)}</span><div><div style="font-weight:700;font-size:17px">${esc(a.org)}</div><div class="muted" style="font-size:13px">Sign in to continue</div></div></div>
+      <div class="fld light"><label for="a-user">Username</label><input id="a-user" autocomplete="off"></div>
+      <div class="fld light"><label for="a-pw">Password</label><input id="a-pw" type="password" autocomplete="off"></div>
       <div class="stack" style="border-top:1px solid var(--line-2);padding-top:14px">
         <div style="font-weight:700">Care Coordinator wants read-only access to:</div>
         ${a.scopes.map(x => `<div class="row" style="gap:10px;font-size:14px"><span style="color:${esc(a.color)};flex-shrink:0">${ic('check', 16, 2.4)}</span>${esc(x)}</div>`).join('')}
@@ -424,7 +453,7 @@ screens.auth = {
       </div>
       <div class="stack" style="gap:8px">
         <button class="btn" data-act="allow" data-source="${esc(p.source)}" style="background:${esc(a.color)}">Sign in and allow</button>
-        <button class="btn ghost" data-go="${p.source === 'plan' ? 'insurance' : 'found'}">Cancel</button>
+        <button class="btn ghost" data-go="${p.source === 'plan' ? 'plan' : 'found'}">Cancel</button>
       </div>
     </section>
   </div></div>`;
@@ -434,23 +463,44 @@ screens.found = {
   load: async () => ({c: await api('/api/connections'), ins: await api('/api/insurance')}),
   view: ({c, ins}) => {
     const i = ins.insurance;
-    const conn = f => `<div class="conn" style="${f.linkable ? '' : 'opacity:.8'}"><div class="conn-ic">${ic(f.kind === 'pharmacy' ? 'pill' : f.kind === 'imaging' ? 'doc' : 'hosp')}</div>
-      <div class="grow"><div style="font-weight:700">${esc(f.name)}</div><div class="muted" style="font-size:13px;margin-top:2px">${esc(f.detail)}</div><div style="font-size:12px;color:#B9A6C6;margin-top:2px">${esc(f.what)}</div></div>
-      ${f.linkable ? (f.linked ? `<span class="ok-txt">${ic('check', 16, 2.4)} Linked</span>` : `<button class="btn peach sm" data-act="link" data-source="${esc(f.id)}">Link</button>`) : ''}</div>`;
+    const portal = c.foundFromClaims.find(f => f.id === 'portal');
+    const others = c.foundFromClaims.filter(f => f.id !== 'portal');
+    const linkBtn = (linked, attrs) => linked ? `<span class="ok-txt">${ic('check', 16, 2.4)} Linked</span>` : `<button class="btn peach sm" ${attrs}>Link</button>`;
+    const conn = (icn, name, sub, what, right, dim) => `<div class="conn" ${dim ? 'style="opacity:.75"' : ''}><div class="conn-ic">${ic(icn)}</div><div class="grow"><div style="font-weight:700">${name}</div><div style="font-size:13px;color:#CDB6E0;margin-top:2px">${sub}</div><div style="font-size:12px;color:#9C8AA8;margin-top:2px">${what}</div></div>${right}</div>`;
     return `<div class="screen ob"><div class="scroll">
     ${stepper(3)}
-    <div class="ok-txt" style="white-space:normal">${ic('check', 16, 2.4)} ${esc(i.planName)} linked${i.memberId ? ' · Member ' + esc(i.memberId) : ''}</div>
+    <div class="row" style="gap:8px;color:#9FD8B0;font-size:14px;font-weight:700">${ic('check', 16, 2.4)} ${esc(i.planName)} linked${i.memberId ? ' · Member ' + esc(i.memberId) : ''}</div>
     <h2 class="h1">I found your doctors</h2>
-    <p>From your last 12 months of claims. Link your patient portal so I can read visit notes, results and prescriptions, including which pharmacy your doctor sends them to.</p>
-    <div class="stack">${c.foundFromClaims.map(conn).join('')}</div>
-    <section class="conn" style="flex-direction:column;align-items:stretch;gap:10px;background:rgba(244,184,163,.1);border-color:rgba(244,184,163,.35)">
-      <div class="row" style="align-items:flex-start"><div class="conn-ic">${ic('sign')}</div><div class="grow"><div style="font-weight:700">Let me act on your behalf</div><div class="muted" style="font-size:13px;margin-top:2px;line-height:1.45">A HIPAA authorization so I can call your doctors' offices to schedule, talk to your plan about approvals and claims, and dispute billing errors. Revoke anytime.</div></div></div>
-      ${c.authorizedRep ? `<span class="ok-txt">${ic('check', 16, 2.4)} Signed</span>` : `<button class="btn peach sm" data-act="consent">Review and sign</button>`}
-    </section>
+    <p>From your last 12 months of ${esc(i.payer)} claims. Link your patient portal so I can see visit notes, prescriptions and referrals.</p>
+    <div class="stack">
+      ${portal ? conn('hosp', esc(portal.name), esc(portal.detail), esc(portal.what) + ', and the pharmacy your prescriptions go to', linkBtn(portal.linked, 'data-act="link" data-source="portal"')) : ''}
+      ${conn('mail', 'Your email <span style="font-weight:500;color:#CDB6E0">· optional</span>', 'Bills from these providers', "I'll check each one against your insurance", linkBtn(c.links.email, 'data-act="linkemail"'))}
+      ${others.map(f => conn(f.kind === 'imaging' ? 'doc' : 'hosp', esc(f.name), esc(f.detail), esc(f.what), '', true)).join('')}
+    </div>
     <div style="flex:1"></div>
-    <button class="btn peach" data-go="reading" ${c.readyToFinish ? '' : 'disabled'}>${c.readyToFinish ? 'Finish setup' : 'Link your portal and sign to continue'}</button>
+    <button class="btn peach" data-go="reading" ${c.readyToFinish ? '' : 'disabled'}>${c.readyToFinish ? 'Finish setup' : 'Link your patient portal to continue'}</button>
   </div></div>`;
   }};
+
+screens.email = {
+  load: () => api('/api/connections/email'),
+  view: d => `<div class="screen" style="background:#E9E4EC"><div class="scroll" style="padding:calc(18px + env(safe-area-inset-top,0px)) 16px 24px">
+  <div class="row" style="justify-content:space-between;font-size:12px;color:var(--muted)"><span class="row" style="gap:6px">${ic('lock', 14, 2)} Connect your email</span><span class="pill p-plum">Simulated</span></div>
+  <section class="card" style="background:#fff;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 2px 10px rgba(30,15,41,.08)">
+    <div class="row"><span class="logo" style="background:var(--plum);color:var(--peach)">${ic('mail')}</span><div><div style="font-weight:700;font-size:17px">Get your bills automatically</div><div class="muted" style="font-size:13px">Choose your email provider</div></div></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">${d.providers.map(p => `<button class="prov ${S.emailProv === p ? 'on' : ''}" data-prov="${esc(p)}" aria-pressed="${S.emailProv === p}">${esc(p)}</button>`).join('')}</div>
+    <div class="stack" style="border-top:1px solid var(--line-2);padding-top:14px">
+      <p style="margin:0;font-size:14px;line-height:1.45">Email providers give apps read access to your whole inbox, not just certain senders. Here's how I use it:</p>
+      ${d.will.map(x => `<div class="row" style="gap:10px;font-size:14px;align-items:flex-start"><span style="color:var(--ok);flex-shrink:0">${ic('check', 16, 2.4)}</span>${esc(x)}</div>`).join('')}
+      ${d.wont.map(x => `<div class="row" style="gap:10px;font-size:14px;align-items:flex-start"><span style="color:var(--warn);flex-shrink:0">${ic('x', 16, 2.4)}</span>${esc(x)}</div>`).join('')}
+      <p class="fine" style="margin:4px 0 0">Next you'd sign in on your email provider's own screen. New providers from your claims are added to the list automatically, and you can disconnect anytime.</p>
+    </div>
+    <div class="stack" style="gap:8px">
+      <button class="btn" data-act="allowemail">Allow read-only access</button>
+      <button class="btn ghost" data-go="${esc(S.emailBack)}">Cancel</button>
+    </div>
+  </section>
+</div></div>`};
 
 screens.reading = {view: () => `<div class="screen ob"><div class="scroll" style="justify-content:center;gap:22px">
   <div class="eyebrow" style="color:var(--peach)">New visit found</div>
@@ -497,7 +547,6 @@ screens.today = {
 
 const STATUS = {booked: ['Booked', 'p-ok'], ordered: ['Ordered', 'p-info'], resulted: ['Results in', 'p-ok'],
                 needs_approval: ['Needs your OK', 'p-warn'], in_progress: ['In progress', 'p-plum']};
-const VIA = {phone_call: ['phone', 'Handled by phone call'], pharmacy: ['pill', 'Sent to your pharmacy'], portal_message: ['msg', 'Through your portal messages']};
 
 screens.visit = {
   load: () => api('/api/visits/latest'),
@@ -506,11 +555,10 @@ screens.visit = {
       const [label, cls] = STATUS[st.status] || [st.status, 'p-plum'];
       const needs = st.status === 'needs_approval';
       const tick = needs ? '<div class="tick todo" aria-hidden="true"></div>' : st.status === 'in_progress' ? '<div class="tick busy" aria-hidden="true"></div>' : `<div class="tick done" aria-hidden="true">${ic('check', 16, 2.4)}</div>`;
-      const via = VIA[st.channel];
       const extra = st.callId ? `<button class="link-mini" data-go="call">${ic('play', 14, 2)} Hear how I booked it</button>`
                   : st.id === 'labs' ? `<button class="link-mini" data-go="results">${ic('flask', 14, 2)} ${st.status === 'resulted' ? 'See your results' : 'Track your results'}</button>` : '';
       const inner = `${tick}<div class="grow"><div class="row" style="justify-content:space-between;gap:8px;align-items:flex-start"><span class="item-t">${esc(st.title)}</span><span class="pill ${cls}">${esc(st.badge && st.status !== 'resulted' ? st.badge : label)}</span></div>
-        <div class="item-s">${esc(st.detail)}</div>${via && !needs ? `<div class="via">${ic(via[0], 13, 2)} ${via[1]}</div>` : ''}${extra}</div>`;
+        <div class="item-s">${esc(st.detail)}</div>${extra}</div>`;
       return st.id === 'pt' ? `<button class="step ${needs ? 'needs' : ''}" data-go="approve">${inner}${needs ? `<span style="align-self:center;color:var(--warn)">${ic('next', 18, 2)}</span>` : ''}</button>` : `<div class="step">${inner}</div>`;
     };
     const pending = d.steps.some(s => s.status === 'needs_approval') ? 1 : 0;
@@ -620,30 +668,75 @@ screens.coverage = {
   },
   view: ({c, e}) => {
     const sample = c.source === 'sample';
-    const est = c.estimatedFields.length;
-    const dataRows = sample
-      ? [['Benefits and costs', 'Deductible, out-of-pocket max, copays · synced today'], ['Claims and EOBs', '14 this year · updated as they process'], ['Negotiated prices', `What ${c.payer} pays each provider`], ['Insurance card', 'From your scan at sign-up']]
-      : [['Benefits and costs', est ? `${est} numbers estimated for a typical ${c.planType}` : 'From your plan documents'], ['Insurance card', 'From what you entered at sign-up'], ['Prices', 'Typical in-network rates (estimates)']];
+    const tone = {ok: 'p-ok', info: 'p-info', warn: 'p-warn', plum: 'p-plum'};
+    const alert = c.alerts.map(a => a.tone === 'ok'
+      ? `<button class="alert ok" data-go="bill"><span style="color:var(--ok);flex-shrink:0;margin-top:1px">${ic('check', 22, 2.2)}</span><span class="grow stack" style="gap:4px"><span style="font-weight:700">${esc(a.title)}</span><span style="font-size:13px;line-height:1.4;color:var(--muted-2)">${esc(a.detail)}</span></span></button>`
+      : `<button class="alert" data-go="bill"><span style="color:var(--warn);flex-shrink:0;margin-top:1px">${ic('warn', 22)}</span><span class="grow stack" style="gap:4px"><span style="font-weight:700">${esc(a.title)}</span><span style="font-size:13px;line-height:1.4;color:var(--muted-2)">${esc(a.detail)}</span><span style="font-size:12px;color:var(--muted)">From the bill in your email, Sep 18 · checked against your ${esc(c.payer)} EOB</span></span><span style="color:var(--warn);align-self:center">${ic('next', 18, 2)}</span></button>`).join('');
+    const photos = c.documents.filter(d => d.new);
+    const bills = c.emailLinked ? `<section class="stack">
+        <div class="row" style="justify-content:space-between"><h3 class="h2">Bills</h3><span class="muted" style="font-size:12px">Checked automatically</span></div>
+        <div class="card list">${c.bills.map(b => `<${b.tappable ? 'button data-go="bill"' : 'div'} class="item"><div class="grow"><div class="row" style="justify-content:space-between;gap:8px"><span class="item-t" style="font-size:14px">${esc(b.provider)}</span><span class="num" style="font-weight:700">${money(b.amount)}</span></div><div class="row" style="justify-content:space-between;gap:8px;margin-top:4px"><span class="item-s" style="margin:0">${esc(b.what)}</span><span class="pill ${tone[b.status[1]]}">${esc(b.status[0])}</span></div>${b.detail ? `<div class="item-s" style="font-size:12px">${esc(b.detail)}</div>` : ''}</div></${b.tappable ? 'button' : 'div'}>`).join('')}</div>
+        ${photos.length ? `<div class="card list">${photos.map(d => `<div class="item"><div class="docic">${ic(d.icon === 'card' ? 'card' : 'doc', 18)}</div><div class="grow"><div class="item-t" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.name)}</div><div class="item-s" style="font-size:12px;margin-top:1px">${esc(d.meta)}</div></div><span class="pill p-ok" style="align-self:center">New</span></div>`).join('')}</div>` : ''}
+        <div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><span class="chip"><span class="dot"></span>Email linked · ${c.billingSenders} billing senders</span><button class="link-mini" style="margin:0" data-act="upload" data-kind="bill">${ic('card', 14, 2)} Snap a paper bill</button></div>
+      </section>`
+      : `<section class="card pad stack" style="border-color:#CDB6E0;background:var(--lav)">
+        <div class="row"><span class="docic" style="background:var(--card)">${ic('mail', 18)}</span><div class="grow"><div style="font-weight:700">Get your bills checked automatically</div><div class="item-s">I'll read billing emails from your providers and check each one against what your insurance says you owe.</div></div></div>
+        <button class="btn" style="min-height:44px;font-size:15px" data-act="linkemail">Connect email</button>
+        <div class="fine">Read-only · I only search for your providers and insurer</div>
+      </section>`;
     return `<div class="screen"><div class="scroll">
     <header class="row" style="justify-content:space-between;align-items:flex-start;gap:12px">
       <div class="stack" style="gap:4px"><h2 class="h1">Coverage</h2><div class="muted" style="font-size:14px">${esc(c.plan)} · 2026 · ${esc(c.coverage)}</div></div>
-      <button class="btn sm" style="border-radius:22px;min-height:44px" data-go="chat">${ic('chat', 16, 2)} Ask</button>
+      <button class="btn sm" style="border-radius:22px;min-height:44px;flex-shrink:0" data-go="chat">${ic('chat', 16, 2)} Ask</button>
     </header>
     <section class="card pad stack" style="gap:14px" aria-label="Benefit usage">
-      ${c.meters.map(m => `<div class="meter"><div class="top"><span style="font-weight:600">${esc(m.label)}${m.estimated ? '<span class="est">Estimate</span>' : ''}</span><span class="num" style="color:var(--muted-2)">${esc(m.text)}</span></div><div class="track"><i style="width:${m.total ? Math.min(100, 100 * m.used / m.total) : 0}%;background:${m.label === 'FSA' ? 'var(--clay)' : 'var(--plum-2)'}"></i></div></div>`).join('')}
-      <div class="fine">As of Sep 25 · ${sample ? 'from ' + esc(c.payer) : 'from what you entered'} · resets Jan 1</div>
+      ${c.meters.filter(m => m.label !== 'FSA').map(m => `<div class="meter"><div class="top"><span style="font-weight:600">${esc(m.label)}${m.estimated ? '<span class="est">Estimate</span>' : ''}</span><span class="num" style="color:var(--muted-2)">${esc(m.text)}</span></div><div class="track"><i style="width:${m.total ? Math.min(100, 100 * m.used / m.total) : 0}%"></i></div></div>`).join('')}
+      <div class="fine">As of Sep 25 · from ${esc(c.payer)} · resets Jan 1</div>
     </section>
-    ${c.alerts.map(a => `<section class="warnbox"><span style="color:var(--warn);flex-shrink:0">${ic('warn', 22)}</span><div class="stack" style="gap:4px"><div style="font-weight:700">${esc(a.title)}</div><div style="font-size:13px;line-height:1.4;color:var(--muted-2)">${esc(a.detail)}</div></div></section>`).join('')}
-    ${e && e.window ? `<button class="card item" style="border-radius:18px;align-items:flex-start" data-go="enroll"><div class="docic">${ic('scale', 18)}</div><div class="grow"><div class="item-t">Your 2027 plan options</div><div class="item-s">${esc(e.headline)}</div></div><span style="color:var(--plum-2);align-self:center">${ic('next', 18, 2)}</span></button>` : ''}
+    ${alert}
+    ${bills}
     <section class="stack">
-      <h3 class="h2">Your plan data</h3>
-      <div class="card list">${dataRows.map(r => `<div class="item"><div class="docic">${ic('doc', 18)}</div><div class="grow"><div class="item-t" style="font-size:14px">${esc(r[0])}</div><div class="item-s" style="font-size:12px">${esc(r[1])}</div></div></div>`).join('')}
-        ${c.documents.filter(d => d.new).map(d => `<div class="item"><div class="docic">${ic(d.icon === 'card' ? 'card' : 'doc', 18)}</div><div class="grow"><div class="item-t" style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.name)}</div><div class="item-s" style="font-size:12px">${esc(d.meta)}</div></div><span class="pill p-ok" style="align-self:center">New</span></div>`).join('')}</div>
-      ${sample ? `<p class="fine" style="margin:0">Nothing to upload. ${esc(c.payer)} shares this directly, read-only.</p>`
-        : `<button class="upload" data-act="upload" data-kind="plan">${ic('upload', 18, 2)} Upload your Summary of Benefits</button><p class="fine" style="margin:0">PDF or text. I'll read your exact deductible and copays from it and replace the estimates.</p>`}
+      <div class="row" style="justify-content:space-between"><h3 class="h2">Your plan data</h3><span class="muted" style="font-size:12px">Synced from ${esc(c.payer)}</span></div>
+      <div class="card list">${[['shield', 'Benefits and costs', sample ? 'Deductible, out-of-pocket max, copays · synced today' : 'Deductible, out-of-pocket max, copays · some estimated'], ['doc', 'Claims and EOBs', '14 this year · updated as they process'], ['card', 'Negotiated prices', `What ${c.payer} pays each provider`], ['card', 'Insurance card', 'From your plan at sign-up']].map(r => `<div class="item"><div class="docic">${ic(r[0], 18)}</div><div class="grow"><div class="item-t" style="font-size:14px">${esc(r[1])}</div><div class="item-s" style="font-size:12px">${esc(r[2])}</div></div></div>`).join('')}</div>
+      <p class="fine" style="margin:0">Nothing to upload. ${esc(c.payer)} shares this directly, read-only.</p>
     </section>
+    ${e && e.window ? `<button class="card item" style="border-radius:18px;align-items:flex-start" data-go="enroll"><div class="docic">${ic('scale', 18)}</div><div class="grow"><div class="item-t">Your 2027 plan options</div><div class="item-s">${esc(e.headline)}</div></div><span style="color:var(--plum-2);align-self:center">${ic('next', 18, 2)}</span></button>` : ''}
   </div>${tabs('coverage', 0)}</div>`;
   }};
+
+screens.bill = {
+  load: () => api('/api/bills/lab'),
+  view: b => {
+    const d = b.stage;
+    const line = l => `<div class="bl ${l.duplicate ? 'dup' : ''}"><div class="grow"><div style="font-weight:600;font-size:13px">${esc(l.name)}</div><div class="num" style="font-size:11px;color:var(--muted)">Code ${esc(l.code)} · ${esc(b.date)}</div></div><span class="num" style="font-weight:700;font-size:14px">${money(l.amount)}</span></div>`;
+    return `<div class="screen"><div class="scroll" style="padding-top:calc(18px + env(safe-area-inset-top,0px))">
+    ${back('coverage', 'Coverage')}
+    <header class="stack" style="gap:8px"><span class="pill ${d >= 2 ? 'p-ok' : d === 1 ? 'p-plum' : 'p-warn'}">${d >= 2 ? 'Fixed' : d === 1 ? 'Disputing' : 'Issue found'}</span><h2 class="h1" style="font-size:26px">${esc(b.title)}</h2></header>
+    <div class="cmp">
+      <section class="card stack" style="padding:12px;gap:8px">
+        <h3 class="label" style="font-size:11px">Their bill</h3>
+        <div class="fine" style="margin-top:-4px">${esc(b.from)}</div>
+        ${b.lines.map(line).join('')}
+        <div class="row" style="justify-content:space-between;border-top:1px solid var(--line-2);padding-top:8px;font-weight:700"><span>Due</span><span class="num" ${d >= 2 ? '' : 'style="color:var(--warn)"'}>${money(b.amount)}</span></div>
+      </section>
+      <section class="card stack" style="padding:12px;gap:8px">
+        <h3 class="label" style="font-size:11px">Your insurance</h3>
+        <div class="fine" style="margin-top:-4px">${esc(b.eob)}</div>
+        ${b.eobLines.map(line).join('')}
+        <div class="fine" style="line-height:1.35">${esc(b.eobNote)}</div>
+        <div class="row" style="justify-content:space-between;border-top:1px solid var(--line-2);padding-top:8px;font-weight:700"><span>You owe</span><span class="num">${money(b.owed)}</span></div>
+      </section>
+    </div>
+    <p style="margin:0;font-size:14px;line-height:1.45;color:var(--muted-2)">${esc(b.explanation)}</p>
+    ${d === 0 ? `<section class="card pad stack"><h3 class="label">What I'll do</h3><div style="font-size:14px;line-height:1.45">${esc(b.plan)}</div><div class="fine">${esc(b.planNote)}</div></section>
+      <button class="btn" data-act="dispute" style="min-height:52px">Ask for a corrected bill</button>
+      <button class="btn ghost" data-go="coverage">Not now</button>`
+    : `<section class="card pad row" style="gap:12px"><div class="tick ${d === 1 ? 'busy' : 'done'}" aria-hidden="true">${d === 2 ? ic('check', 16, 2.4) : ''}</div><div class="grow"><div class="item-t">${esc(b.progress.title)}</div><div class="item-s">${esc(b.progress.detail)}</div></div></section>
+      ${d === 2 ? '<button class="btn" data-go="coverage">Done</button>' : ''}`}
+    ${b.timingNote ? `<p class="fine" style="margin:0">${esc(b.timingNote)}</p>` : ''}
+  </div>${tabs('coverage', 0)}</div>`;
+  },
+  after: b => { if (b.stage === 1) later(() => refresh('bill'), 1200); }};
 
 screens.enroll = {
   load: () => api('/api/enrollment/2027'),
@@ -662,12 +755,15 @@ screens.enroll = {
 </div>${tabs('coverage', 0)}</div>`};
 
 screens.chat = {
-  load: () => api('/api/chat'),
+  load: async () => {
+    const [h, mri, cov] = await Promise.all([api('/api/chat'), api('/api/estimates/knee_mri'), api('/api/coverage')]);
+    return {...h, mri, payer: cov.payer};
+  },
   view: d => `<div class="screen">
   <div class="chat-head"><button class="iconbtn" data-go="coverage" aria-label="Back to Coverage">${ic('back', 20, 2)}</button>
-    <div class="grow"><div style="font-weight:700;font-size:17px">Ask about costs</div><div class="muted" style="font-size:12px">Answers from your plan · math from your benefits</div></div></div>
+    <div class="grow"><div style="font-weight:700;font-size:17px">Ask about costs</div><div class="muted" style="font-size:12px">Answers from your ${esc(d.payer)} plan</div></div></div>
   <div class="msgs" id="msgs" aria-live="polite">
-    ${d.messages.length ? '' : `<div class="ai"><div>Ask me what care will cost on your plan. I'll show the math: price, what's left on your deductible, and your copay or coinsurance.</div><div class="src">I don't give medical advice. Clinical questions go to your doctor.</div></div>`}
+    ${mriExample(d)}
     ${d.messages.map(m => m.role === 'user' ? `<div class="me">${esc(m.text)}</div>` : `<div class="ai">${mdlite(m.text)}</div>`).join('')}
   </div>
   <form class="composer" id="ask">
@@ -686,7 +782,7 @@ screens.account = {
     <header class="row"><div class="avatar-btn" aria-hidden="true" style="width:56px;height:56px;border-radius:28px;font-size:22px">${esc((a.name || 'M')[0])}</div><div class="stack" style="gap:2px"><h2 class="h1" style="font-size:26px">${esc(a.name)}</h2><div class="muted" style="font-size:14px">${esc(a.email)}</div></div></header>
     <section class="stack"><h3 class="h2">Insurance</h3>
       <div class="card list">${row('Company', i.payer)}${row('Plan', i.planName)}${row('Type', i.planType)}${row('Member ID', i.memberId)}${i.estimatedFields.length ? row('Benefits', `${i.estimatedFields.length} estimated`) : row('Benefits', 'Exact')}</div>
-      <button class="btn ghost" data-go="insurance">Update insurance</button>
+      <button class="btn ghost" data-go="plan">Update insurance</button>
     </section>
     <section class="stack"><h3 class="h2">Connected</h3>
       <div class="card list">${d.connections.map(c => `<div class="profile-row"><span>${esc(c.name)}</span><span style="color:${c.linked ? 'var(--ok)' : 'var(--muted)'}">${c.linked ? 'Linked' : 'Not linked'}</span></div>`).join('')}
@@ -696,6 +792,17 @@ screens.account = {
     <button class="btn ghost" data-act="sign-out" style="color:var(--clay);border-color:#E4C3B6">Sign out</button>
   </div>${tabs('today', 0)}</div>`;
   }};
+
+function mriExample(d) {
+  const best = d.mri.options[0], other = d.mri.options[d.mri.options.length - 1];
+  const rows = [['Plan\'s negotiated price', best.negotiatedPrice], ...best.breakdown.map(x => [x.label, x.amount])];
+  return `<div class="me">How much will a knee MRI cost me?</div>
+  <div class="ai"><div class="big">About ${money(best.youPay)} at an in-network imaging center</div>
+    <div class="brk">${rows.map(r => `<div><span class="muted">${esc(r[0])}</span><span class="num">${money(r[1])}</span></div>`).join('')}<div class="tot"><span>You pay</span><span class="num">${money(best.youPay)}</span></div></div>
+    ${other !== best ? `<div class="callout">The same scan at ${esc(other.provider.split(' (')[0])} would be about ${money(other.youPay)}.</div>` : ''}
+    <div style="margin-top:10px;font-size:13px;line-height:1.4">Before you can book, you'd need an order from Dr. Nair and approval from ${esc(d.payer)}. MRIs need prior authorization on your plan. Want me to ask Dr. Nair's office?</div>
+    <div class="src">From: ${esc(d.payer)} benefits and negotiated rates · synced Sep 25</div></div>`;
+}
 
 /* Year in Care: 4 story cards */
 screens.recap = {
@@ -819,27 +926,34 @@ async function ask(q) {
   chatBusy = false;
 }
 
-function benefitsFromForm() {
-  const out = {};
-  document.querySelectorAll('[data-benefit]').forEach(inp => {
-    const v = inp.value.trim();
-    if (v) out[inp.dataset.benefit] = inp.dataset.benefit === 'coinsurance' ? Number(v.replace(/[^\d.]/g, '')) / 100 : v;
+function choosePlan(btn, name) {
+  withBusy(btn, async () => {
+    // The sample payer comes with a full sample record; any other name is the member's own plan.
+    if (/^blue ridge/i.test(name)) await api('/api/card/scan', {method: 'POST'});
+    else await api('/api/insurance', {method: 'POST', body: {payer: name, memberName: S.acctName || null}});
+    go('auth', {source: 'plan'});
   });
-  return out;
 }
+
 
 document.addEventListener('click', e => {
   const g = e.target.closest('[data-go]');
   if (g) { e.stopPropagation(); go(g.dataset.go, g.dataset.go === 'recap' ? {i: 0} : {}); return; }
   const sug = e.target.closest('[data-sug]');
   if (sug) { ask(sug.dataset.sug); return; }
+  const pv = e.target.closest('[data-prov]');
+  if (pv) { S.emailProv = pv.dataset.prov; document.querySelectorAll('.prov').forEach(b => { b.classList.toggle('on', b === pv); b.setAttribute('aria-pressed', b === pv); }); return; }
+  const pl = e.target.closest('[data-plan]');
+  if (pl) { choosePlan(pl, pl.dataset.plan); return; }
   const a = e.target.closest('[data-act]');
   if (!a) return;
   const act = a.dataset.act;
   if (act === 'retry') go(S.screen, S.params);
   else if (act === 'link') go('auth', {source: a.dataset.source});
+  else if (act === 'linkemail') { S.emailBack = S.screen; go('email'); }
+  else if (act === 'allowemail') withBusy(a, async () => { const r = await api('/api/connections/email', {method: 'POST', body: {provider: S.emailProv}}); toast(r.message); go(S.emailBack); });
+  else if (act === 'dispute') withBusy(a, async () => { await api('/api/bills/lab/dispute', {method: 'POST'}); toast('Sent to Northside Lab billing'); go('bill', {}, {quiet: true}); });
   else if (act === 'allow') withBusy(a, async () => { const r = await api(`/api/connections/${a.dataset.source}`, {method: 'POST'}); toast(r.org + ' linked'); go('found'); });
-  else if (act === 'consent') withBusy(a, async () => { await api('/api/consent/authorized-rep', {method: 'POST'}); toast('Authorization signed'); go('found', {}, {quiet: true}); });
   else if (act === 'approve') withBusy(a, async () => { await api('/api/visits/latest/pt/approve', {method: 'POST', body: {autoApprove: !!$('#auto')?.checked}}); toast("Sent to Dr. Nair's office"); go('approve', {}, {quiet: true}); });
   else if (act === 'notify-results') {
     a.disabled = true; a.textContent = "I'll let you know";
@@ -872,22 +986,22 @@ document.addEventListener('click', e => {
   }
 });
 
+document.addEventListener('input', e => {
+  if (e.target.id !== 'planq') return;
+  S.planq = e.target.value;
+  const d = cache.plan;
+  if (d) $('#planList').innerHTML = planRows(d.payers.filter(p => (p.name + p.subtitle).toLowerCase().includes(S.planq.toLowerCase())), S.planq);
+});
+
 document.addEventListener('submit', e => {
   e.preventDefault();
   const f = e.target, btn = f.querySelector('[type=submit]');
   if (f.id === 'signup') withBusy(btn, async () => {
-    await api('/api/signup', {method: 'POST', body: {name: $('#f-name').value.trim(), dob: $('#f-dob').value, email: $('#f-email').value.trim(), phone: $('#f-phone').value.trim() || null}});
-    toast('Account created'); go('insurance');
+    S.acctName = $('#f-name').value.trim();
+    await api('/api/signup', {method: 'POST', body: {name: S.acctName, dob: $('#f-dob').value, email: $('#f-email').value.trim(), phone: $('#f-phone').value.trim() || null}});
+    toast('Account created'); go('authorize');
   });
-  else if (f.id === 'ins') withBusy(btn, async () => {
-    const r = await api('/api/insurance', {method: 'POST', body: {
-      payer: $('#i-payer').value.trim(), planType: $('#i-type').value, coverageSource: $('#i-src').value,
-      planName: $('#i-plan').value.trim() || null, memberId: $('#i-mid').value.trim() || null,
-      groupNumber: $('#i-grp').value.trim() || null, memberName: $('#f-name')?.value || null, benefits: benefitsFromForm()}});
-    const n = r.estimatedFields.length;
-    toast(n ? `Plan saved. ${n} numbers estimated for now` : 'Plan saved with your numbers');
-    go('auth', {source: 'plan'});
-  });
+  else if (f.id === 'authz') withBusy(btn, async () => { await api('/api/consent/authorized-rep', {method: 'POST'}); toast('Authorization signed'); go('plan'); });
   else if (f.id === 'ask') { const q = $('#q'); const v = q.value; q.value = ''; ask(v); }
 });
 

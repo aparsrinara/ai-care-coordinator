@@ -66,9 +66,18 @@ ENROLLMENT_WINDOWS = {
 
 # Common US payers for the plan search box. Members can type any name.
 PAYER_DIRECTORY = [
-    "Aetna", "Anthem Blue Cross", "Blue Cross Blue Shield", "Cigna", "Humana", "Kaiser Permanente",
-    "UnitedHealthcare", "Oscar Health", "Molina Healthcare", "Centene / Ambetter", "Highmark",
-    "Florida Blue", "Blue Shield of California", "Medicare", "Medicaid", "Blue Ridge Health (sample)",
+    {"name": "Aetna", "subtitle": "Employer, individual and Medicare plans"},
+    {"name": "Anthem Blue Cross", "subtitle": "PPO, HMO and EPO plans"},
+    {"name": "Blue Cross Blue Shield", "subtitle": "Employer and individual plans"},
+    {"name": "Cigna", "subtitle": "Employer and individual plans"},
+    {"name": "Humana", "subtitle": "Medicare Advantage and employer plans"},
+    {"name": "Kaiser Permanente", "subtitle": "HMO plans"},
+    {"name": "UnitedHealthcare", "subtitle": "Employer, individual and Medicare plans"},
+    {"name": "Oscar Health", "subtitle": "Individual and family plans"},
+    {"name": "Molina Healthcare", "subtitle": "Medicaid and marketplace plans"},
+    {"name": "Medicare", "subtitle": "Original Medicare and Advantage"},
+    {"name": "Medicaid", "subtitle": "State Medicaid plans"},
+    {"name": "Blue Ridge Health", "subtitle": "PPO, HMO and EPO plans · sample plan"},
 ]
 
 
@@ -76,7 +85,7 @@ def sample() -> dict:
     """Maya's sample card and benefits (the demo's default)."""
     return {
         "source": "sample",
-        "payer": "Blue Ridge Health", "planName": "Blue Ridge PPO Silver (2026)", "planType": "PPO",
+        "payer": "Blue Ridge Health", "planName": "Blue Ridge PPO Silver", "planType": "PPO",
         "coverageSource": "employer", "memberName": "Maya Chen", "memberId": "BRX 482 190 337",
         "groupNumber": "20418", "rxBin": "610014", "coverage": "Individual",
         "premiumYear": 3480,
@@ -116,6 +125,8 @@ def normalize_type(plan_type: str | None, plan_name: str = "") -> str:
         return "Medicaid"
     if "medicare" in text:
         return "Medicare Advantage"
+    if "kaiser" in text:
+        return "HMO"
     if any(w in text for w in ("hdhp", "hsa", "high deductible", "bronze")):
         return "HDHP"
     for t in ("EPO", "POS", "HMO", "PPO"):
